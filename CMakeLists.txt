@@ -461,6 +461,12 @@ if (ENABLE_ALL OR ENABLE_LIBRDKAFKA)
 	createExtension(RDKAFKA-EXTENSIONS "RDKAFKA EXTENSIONS" "This Enables librdkafka functionality including PublishKafka" "extensions/librdkafka" "extensions/librdkafka/tests" "extensions/librdkafka/docker-tests")
 endif()
 
+## Nvidia RAPIDs Extension
+option(ENABLE_RAPIDS "Enables the Nvidia RAPIDs extension." OFF)
+if (ENABLE_ALL OR ENABLE_RAPIDS)
+	createExtension(RAPIDS-EXTENSIONS "RAPIDS EXTENSIONS" "This enables Nvidia Rapids" "extensions/rapids" "${TEST_DIR}/rapids-tests")
+endif()
+
 ## Scripting extensions
 option(DISABLE_SCRIPTING "Disables the scripting extensions." OFF)
 if (NOT DISABLE_SCRIPTING)
