@@ -222,7 +222,6 @@ typedef struct {
 
 // Transaction Class
 typedef struct {
-
   // Number of current transfers
   int current_transfers_;
   // number of total seen transfers
@@ -342,7 +341,7 @@ static inline int write_UTF_len(CTransaction * transaction, const char * str, si
     ret = write_uint32t(transaction, len);
   }
 
-  if(len == 0 || ret < 0) {
+  if (len == 0 || ret < 0) {
     return ret;
   }
 

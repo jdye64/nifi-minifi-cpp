@@ -45,7 +45,7 @@ class ConvertBase : public core::Processor, public minifi::c2::RESTProtocol {
   /*!
    * Create a new processor
    */
-  explicit ConvertBase(std::string name, utils::Identifier uuid = utils::Identifier())
+  explicit ConvertBase(const std::string& name, const utils::Identifier& uuid = {})
       : core::Processor(name, uuid) {
   }
   // Destructor
@@ -77,7 +77,6 @@ class ConvertBase : public core::Processor, public minifi::c2::RESTProtocol {
   std::shared_ptr<controllers::MQTTControllerService> mqtt_service_;
 
   std::string listening_topic;
-
 };
 
 } /* namespace processors */

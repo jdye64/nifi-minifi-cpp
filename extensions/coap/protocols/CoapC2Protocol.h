@@ -49,12 +49,12 @@ namespace coap {
 namespace c2 {
 
 #define REQUIRE_VALID(x) \
-  if (-1 == x){ \
+  if (-1 == x) { \
     return minifi::c2::C2Payload(payload.getOperation(), state::UpdateState::READ_ERROR); \
   }
 
-#define REQUIRE_SIZE_IF(y,x) \
-  if (y != x){ \
+#define REQUIRE_SIZE_IF(y, x) \
+  if (y != x) { \
     return minifi::c2::C2Payload(payload.getOperation(), state::UpdateState::READ_ERROR); \
   }
 
@@ -97,7 +97,6 @@ class CoapProtocol : public minifi::c2::RESTSender {
     return response.getCode() == COAP_RESPONSE_400 && !memcmp(response.getData(), REGISTRATION_MSG, response.getSize());
   }
 
-  using minifi::c2::RESTProtocol::getOperation;
   /**
    * Returns the operation for the translated integer
    * @param type input type
@@ -136,7 +135,6 @@ class CoapProtocol : public minifi::c2::RESTSender {
   static uint8_t REGISTRATION_MSG[8];
 
   std::shared_ptr<logging::Logger> logger_;
-
 };
 } /* namespace c2 */
 } /* namespace coap */

@@ -170,7 +170,7 @@ core::Property ConsumeWindowsEventLog::ProcessOldEvents(
 
 core::Relationship ConsumeWindowsEventLog::Success("success", "Relationship for successfully consumed events.");
 
-ConsumeWindowsEventLog::ConsumeWindowsEventLog(const std::string& name, utils::Identifier uuid)
+ConsumeWindowsEventLog::ConsumeWindowsEventLog(const std::string& name, const utils::Identifier& uuid)
   : core::Processor(name, uuid),
     logger_(logging::LoggerFactory<ConsumeWindowsEventLog>::getLogger()) {
   char buff[MAX_COMPUTERNAME_LENGTH + 1];
@@ -214,7 +214,6 @@ void ConsumeWindowsEventLog::initialize() {
 }
 
 bool ConsumeWindowsEventLog::insertHeaderName(wel::METADATA_NAMES &header, const std::string &key, const std::string & value) const {
-
   wel::METADATA name = wel::WindowsEventLogMetadata::getMetadataFromString(key);
 
   if (name != wel::METADATA::UNKNOWN) {
@@ -598,7 +597,6 @@ bool ConsumeWindowsEventLog::createEventRender(EVT_HANDLE hEvent, EventRender& e
     auto message = handler.getEventMessage(hEvent);
 
     if (!message.empty()) {
-
       for (const auto &mapEntry : walker.getIdentifiers()) {
         // replace the identifiers with their translated strings.
         if (mapEntry.first.empty() || mapEntry.second.empty()) {

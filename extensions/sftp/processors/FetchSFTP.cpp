@@ -115,7 +115,7 @@ void FetchSFTP::initialize() {
   setSupportedRelationships(relationships);
 }
 
-FetchSFTP::FetchSFTP(std::string name, utils::Identifier uuid /*= utils::Identifier()*/)
+FetchSFTP::FetchSFTP(const std::string& name, const utils::Identifier& uuid /*= utils::Identifier()*/)
     : SFTPProcessorBase(name, uuid),
       create_directory_(false),
       disable_directory_listing_(false) {
@@ -132,17 +132,17 @@ void FetchSFTP::onSchedule(const std::shared_ptr<core::ProcessContext> &context,
   if (!context->getProperty(CreateDirectory.getName(), value)) {
     logger_->log_error("Create Directory attribute is missing or invalid");
   } else {
-    utils::StringUtils::StringToBool(value, create_directory_);
+    create_directory_ = utils::StringUtils::toBool(value).value_or(false);
   }
   if (!context->getProperty(DisableDirectoryListing.getName(), value)) {
     logger_->log_error("Disable Directory Listing attribute is missing or invalid");
   } else {
-    utils::StringUtils::StringToBool(value, disable_directory_listing_);
+    disable_directory_listing_ = utils::StringUtils::toBool(value).value_or(false);
   }
   if (!context->getProperty(UseCompression.getName(), value)) {
     logger_->log_error("Use Compression attribute is missing or invalid");
   } else {
-    utils::StringUtils::StringToBool(value, use_compression_);
+    use_compression_ = utils::StringUtils::toBool(value).value_or(false);
   }
 
   startKeepaliveThreadIfNeeded();

@@ -40,7 +40,7 @@ namespace jni {
 class JVMCreator : public minifi::core::CoreComponent {
  public:
 
-  explicit JVMCreator(const std::string &name, utils::Identifier uuid = utils::Identifier())
+  explicit JVMCreator(const std::string &name, const utils::Identifier &uuid = {})
       : minifi::core::CoreComponent(name, uuid),
         loader_(nullptr),
         logger_(logging::LoggerFactory<JVMCreator>::getLogger()) {
@@ -59,7 +59,6 @@ class JVMCreator : public minifi::core::CoreComponent {
       logger_->log_debug("Adding path %s", path);
       minifi::utils::file::FileUtils::addFilesMatchingExtension(logger_, path, ".jar", classpaths_);
     }
-
   }
 
   void configure(const std::shared_ptr<Configure> &configuration) override {

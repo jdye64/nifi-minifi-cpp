@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "core/Resource.h"
-#include "HeartBeatReporter.h"
+#include "HeartbeatReporter.h"
 #include "io/StreamFactory.h"
 #include "core/logging/LoggerConfiguration.h"
 
@@ -38,10 +38,10 @@ namespace c2 {
  * Purpose: Creates a reporter that can handle basic c2 operations for a localized environment
  * through a simple TCP socket.
  */
-class ControllerSocketProtocol : public HeartBeatReporter {
+class ControllerSocketProtocol : public HeartbeatReporter {
  public:
-  ControllerSocketProtocol(std::string name, utils::Identifier uuid = utils::Identifier()) // NOLINT
-      : HeartBeatReporter(name, uuid),
+  ControllerSocketProtocol(const std::string& name, const utils::Identifier& uuid = {}) // NOLINT
+      : HeartbeatReporter(name, uuid),
         logger_(logging::LoggerFactory<ControllerSocketProtocol>::getLogger()) {
   }
 

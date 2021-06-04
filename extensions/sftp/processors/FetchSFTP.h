@@ -51,7 +51,7 @@ class FetchSFTP : public SFTPProcessorBase {
   /*!
    * Create a new processor
    */
-  FetchSFTP(std::string name, utils::Identifier uuid = utils::Identifier());
+  FetchSFTP(const std::string& name, const utils::Identifier& uuid = {});
   virtual ~FetchSFTP();
 
   // Supported Properties
@@ -91,6 +91,9 @@ class FetchSFTP : public SFTPProcessorBase {
   };
 
  private:
+  core::annotation::Input getInputRequirement() const override {
+    return core::annotation::Input::INPUT_REQUIRED;
+  }
 
   std::string completion_strategy_;
   bool create_directory_;

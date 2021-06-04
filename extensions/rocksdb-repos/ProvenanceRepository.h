@@ -37,9 +37,8 @@ namespace provenance {
 
 class ProvenanceRepository : public core::Repository, public std::enable_shared_from_this<ProvenanceRepository> {
  public:
-  ProvenanceRepository(std::string name, utils::Identifier /*uuid*/)
-      : ProvenanceRepository(name){
-
+  ProvenanceRepository(const std::string& name, const utils::Identifier& /*uuid*/)
+      : ProvenanceRepository(name) {
   }
   // Constructor
   /*!
@@ -98,7 +97,7 @@ class ProvenanceRepository : public core::Repository, public std::enable_shared_
 
     options.compaction_style = rocksdb::CompactionStyle::kCompactionStyleFIFO;
     options.compaction_options_fifo = rocksdb::CompactionOptionsFIFO(max_partition_bytes_, false);
-    if(max_partition_millis_ > 0) {
+    if (max_partition_millis_ > 0) {
       options.ttl = max_partition_millis_ / 1000;
     }
 
@@ -127,7 +126,7 @@ class ProvenanceRepository : public core::Repository, public std::enable_shared_
 
   virtual bool MultiPut(const std::vector<std::pair<std::string, std::unique_ptr<minifi::io::BufferStream>>>& data) {
     rocksdb::WriteBatch batch;
-    for (const auto &item: data) {
+    for (const auto &item : data) {
       rocksdb::Slice value((const char *) item.second->getBuffer(), item.second->size());
       if (!batch.Put(item.first, value).ok()) {
         return false;
@@ -169,7 +168,6 @@ class ProvenanceRepository : public core::Repository, public std::enable_shared_
     size_t requested_batch = max_size;
     max_size = 0;
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-
       if (max_size >= requested_batch)
         break;
       std::shared_ptr<core::SerializableComponent> eventRead = lambda();

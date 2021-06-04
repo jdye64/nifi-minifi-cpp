@@ -108,7 +108,7 @@ constexpr char const* SFTPProcessorBase::PROXY_TYPE_SOCKS;
 
 constexpr size_t SFTPProcessorBase::CONNECTION_CACHE_MAX_SIZE;
 
-SFTPProcessorBase::SFTPProcessorBase(std::string name, utils::Identifier uuid)
+SFTPProcessorBase::SFTPProcessorBase(const std::string& name, const utils::Identifier& uuid)
     : Processor(name, uuid),
       connection_timeout_(0),
       data_timeout_(0),
@@ -158,7 +158,7 @@ void SFTPProcessorBase::parseCommonPropertiesOnSchedule(const std::shared_ptr<co
   if (!context->getProperty(StrictHostKeyChecking.getName(), value)) {
     logger_->log_error("Strict Host Key Checking attribute is missing or invalid");
   } else {
-    utils::StringUtils::StringToBool(value, strict_host_checking_);
+    strict_host_checking_ = utils::StringUtils::toBool(value).value_or(false);
   }
   context->getProperty(HostKeyFile.getName(), host_key_file_);
   if (!context->getProperty(ConnectionTimeout.getName(), value)) {
@@ -180,7 +180,7 @@ void SFTPProcessorBase::parseCommonPropertiesOnSchedule(const std::shared_ptr<co
   if (!context->getProperty(SendKeepaliveOnTimeout.getName(), value)) {
     logger_->log_error("Send Keep Alive On Timeout attribute is missing or invalid");
   } else {
-    utils::StringUtils::StringToBool(value, use_keepalive_on_timeout_);
+    use_keepalive_on_timeout_ = utils::StringUtils::toBool(value).value_or(true);
   }
   context->getProperty(ProxyType.getName(), proxy_type_);
 }

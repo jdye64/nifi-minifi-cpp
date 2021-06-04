@@ -44,9 +44,9 @@ int ssl_protocol_en(void *ssl_context, void *user_data);
  * will encompass other protocols the context of its meaning here simply translates into POST and GET respectively.
  *
  */
-class RESTReceiver : public RESTProtocol, public HeartBeatReporter {
+class RESTReceiver : public RESTProtocol, public HeartbeatReporter {
  public:
-  RESTReceiver(std::string name, utils::Identifier uuid = utils::Identifier());
+  RESTReceiver(const std::string& name, const utils::Identifier& uuid = {});
 
   void initialize(core::controller::ControllerServiceProvider* controller, const std::shared_ptr<state::StateMonitor> &updateSink,
                           const std::shared_ptr<Configure> &configure) override;
@@ -55,7 +55,6 @@ class RESTReceiver : public RESTProtocol, public HeartBeatReporter {
  protected:
 
   class ListeningProtocol : public CivetHandler {
-
    public:
     ListeningProtocol() = default;
 
@@ -82,7 +81,6 @@ class RESTReceiver : public RESTProtocol, public HeartBeatReporter {
    protected:
     std::mutex reponse_mutex_;
     std::string resp_;
-
   };
 
   std::unique_ptr<CivetServer> start_webserver(const std::string &port, std::string &rooturi, CivetHandler *handler, std::string &ca_cert);

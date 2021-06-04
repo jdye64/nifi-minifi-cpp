@@ -26,7 +26,6 @@
 #include "sitetosite/CRawSocketProtocol.h"
 
 int main(int argc, char **argv) {
-
   if (argc < 4) {
     printf("Error: must run ./transmit_payload <host> <port> <nifi port>\n");
     exit(1);
@@ -55,7 +54,7 @@ int main(int argc, char **argv) {
   as.size = 1;
   as.attributes = &attribute1;
 
-  if(transmitPayload(client, payload, &as) == 0){
+  if (transmitPayload(client, payload, &as) == 0) {
     printf("Packet successfully sent\n");
   } else {
     printf("Failed to send packet\n");

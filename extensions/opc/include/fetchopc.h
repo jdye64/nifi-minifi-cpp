@@ -59,7 +59,7 @@ public:
   static core::Relationship Success;
   static core::Relationship Failure;
 
-  FetchOPCProcessor(std::string name, utils::Identifier uuid = utils::Identifier())
+  FetchOPCProcessor(const std::string& name, const utils::Identifier& uuid = {})
   : BaseOPCProcessor(name, uuid), nameSpaceIdx_(0), nodesFound_(0), variablesFound_(0), maxDepth_(0) {
     logger_ = logging::LoggerFactory<FetchOPCProcessor>::getLogger();
   }
@@ -98,7 +98,6 @@ private:
   std::mutex onTriggerMutex_;
   std::vector<UA_NodeId> translatedNodeIDs_;  // Only used when user provides path, path->nodeid translation is only done once
   std::unordered_map<std::string, std::string> node_timestamp_;  // Key = Full path, Value = Timestamp
-
 };
 
 REGISTER_RESOURCE(FetchOPCProcessor, "Fetches OPC-UA node");

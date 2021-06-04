@@ -64,7 +64,6 @@ class StringAppender : public rocksdb::AssociativeMergeOperator {
   }
 
  private:
-
 };
 
 /**
@@ -79,7 +78,7 @@ class DatabaseContentRepository : public core::ContentRepository, public core::C
   };
  public:
 
-  DatabaseContentRepository(std::string name = getClassName<DatabaseContentRepository>(), utils::Identifier uuid = utils::Identifier())
+  DatabaseContentRepository(const std::string& name = getClassName<DatabaseContentRepository>(), const utils::Identifier& uuid = {})
       : core::Connectable(name, uuid),
         is_valid_(false),
         db_(nullptr),
@@ -108,7 +107,6 @@ class DatabaseContentRepository : public core::ContentRepository, public core::C
   bool exists(const minifi::ResourceClaim &streamId) override;
 
   void yield() override {
-
   }
 
   /**

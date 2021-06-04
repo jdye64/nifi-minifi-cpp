@@ -108,7 +108,7 @@ class PayloadSerializer {
   static uint8_t opToInt(const Operation opt) {
     uint8_t op;
 
-    switch (opt) {
+    switch (opt.value()) {
       case Operation::ACKNOWLEDGE:
         op = 1;
         break;
@@ -180,28 +180,32 @@ class PayloadSerializer {
     stream->read(&type, 1);
     state::response::ValueNode node;
     switch (type) {
-      case 1:
-        uint32_t thb;
+      case 1: {
+        uint32_t thb = 0;
         stream->read(thb);
         node = thb;
         break;
-      case 2:
-        uint64_t base;
+      }
+      case 2: {
+        uint64_t base = 0;
         stream->read(base);
         node = base;
         break;
-      case 3:
+      }
+      case 3: {
         stream->read(&type, 1);
         if (type == 1)
           node = true;
         else
           node = false;
         break;
-      default:
+      }
       case 4:
+      default: {
         std::string str;
         stream->read(str);
         node = str;
+      }
     }
     return node;
   }
@@ -222,7 +226,7 @@ class PayloadSerializer {
   static bool deserializePayload(C2Payload &parent, Operation operation, std::string identifier, io::BaseStream *stream) {
     uint32_t payloads = 0;
     stream->read(payloads);
-    uint8_t op, st;
+    uint8_t op{}, st{};
     std::string label;
     for (size_t i = 0; i < payloads; i++) {
       stream->read(op);
@@ -257,7 +261,7 @@ class PayloadSerializer {
   static bool deserialize(std::vector<uint8_t> data, C2Payload &payload) {
     io::BufferStream stream(data.data(), gsl::narrow<unsigned int>(data.size()));
 
-    uint8_t op, st = 0;
+    uint8_t op = 0, st = 0;
     uint16_t version = 0;
 
     std::string identifier, label;

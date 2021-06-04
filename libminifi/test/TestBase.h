@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef LIBMINIFI_TEST_TESTBASE_H_
-#define LIBMINIFI_TEST_TESTBASE_H_
+#pragma once
+
 #include <cstdio>
 #include <cstdlib>
 #include <map>
@@ -25,6 +25,9 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <string>
+#include <memory>
+
 #include "ResourceClaim.h"
 #include "utils/file/FileUtils.h"
 #include "catch.hpp"
@@ -132,14 +135,15 @@ class LogTestController {
         setLevel(name, level);
       }
     }
-
   }
 
   bool contains(const std::string &ending, std::chrono::seconds timeout = std::chrono::seconds(3), std::chrono::milliseconds sleep_interval = std::chrono::milliseconds(200)) {
     return contains(log_output, ending, timeout, sleep_interval);
   }
 
-  bool contains(const std::ostringstream &stream, const std::string &ending, std::chrono::seconds timeout = std::chrono::seconds(3), std::chrono::milliseconds sleep_interval = std::chrono::milliseconds(200)) {
+  bool contains(const std::ostringstream &stream, const std::string &ending,
+                std::chrono::seconds timeout = std::chrono::seconds(3),
+                std::chrono::milliseconds sleep_interval = std::chrono::milliseconds(200)) {
     if (ending.length() == 0) {
       return false;
     }
@@ -182,6 +186,7 @@ class LogTestController {
   std::ostringstream log_output;
 
   std::shared_ptr<logging::Logger> logger_;
+
  protected:
   LogTestController()
       : LogTestController(nullptr) {
@@ -211,7 +216,6 @@ class LogTestController {
       config->initialize(my_properties_);
       logger_ = config->getLogger(core::getClassName<LogTestController>());
     }
-
   }
 
   void setLevel(const std::string name, spdlog::level::level_enum level);
@@ -312,6 +316,8 @@ class TestPlan {
 
   void finalize();
 
+  void validateAnnotations() const;
+
  protected:
   class StateDir {
    public:
@@ -321,7 +327,7 @@ class TestPlan {
       is_owner_ = true;
     }
 
-    StateDir(std::string path) : path_(std::move(path)), is_owner_(false) {}
+    explicit StateDir(std::string path) : path_(std::move(path)), is_owner_(false) {}
 
     StateDir(const StateDir&) = delete;
     StateDir& operator=(const StateDir&) = delete;
@@ -385,7 +391,6 @@ class TestPlan {
 
 class TestController {
  public:
-
   TestController()
       : log(LogTestController::getInstance()) {
     core::FlowConfiguration::initialize_static_functions();
@@ -409,11 +414,11 @@ class TestController {
     return std::make_shared<TestPlan>(content_repo, flow_repo, repo, flow_version_, configuration, state_dir);
   }
 
-  void runSession(std::shared_ptr<TestPlan> &plan, bool runToCompletion = true, std::function<void(const std::shared_ptr<core::ProcessContext>&, const std::shared_ptr<core::ProcessSession>&)> verify =
-                      nullptr) {
-
+  void runSession(const std::shared_ptr<TestPlan> &plan,
+                  bool runToCompletion = true,
+                  const std::function<void(const std::shared_ptr<core::ProcessContext>&,
+                  const std::shared_ptr<core::ProcessSession>&)>& verify = nullptr) {
     while (plan->runNextProcessor(verify) && runToCompletion) {
-
     }
   }
 
@@ -445,5 +450,3 @@ class TestController {
   LogTestController &log;
   std::vector<std::string> directories;
 };
-
-#endif /* LIBMINIFI_TEST_TESTBASE_H_ */

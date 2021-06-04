@@ -36,7 +36,7 @@
 #include "C2Trigger.h"
 #include "C2Protocol.h"
 #include "io/validation.h"
-#include "HeartBeatReporter.h"
+#include "HeartbeatReporter.h"
 #include "utils/Id.h"
 #include "utils/MinifiConcurrentQueue.h"
 #include "utils/ThreadPool.h"
@@ -92,8 +92,6 @@ class C2Agent : public state::UpdateController {
 
  protected:
   void restart_agent();
-
-  void update_agent();
 
   /**
    * Check the collection of triggers for any updates that need to be handled.
@@ -219,19 +217,11 @@ class C2Agent : public state::UpdateController {
 
   std::mutex heartbeat_mutex;
 
-  std::vector<std::shared_ptr<HeartBeatReporter>> heartbeat_protocols_;
+  std::vector<std::shared_ptr<HeartbeatReporter>> heartbeat_protocols_;
 
   std::vector<std::shared_ptr<C2Trigger>> triggers_;
 
   std::atomic<C2Protocol*> protocol_;
-
-  bool allow_updates_;
-
-  std::string update_command_;
-
-  std::string update_location_;
-
-  std::string bin_location_;
 
   std::shared_ptr<logging::Logger> logger_;
 

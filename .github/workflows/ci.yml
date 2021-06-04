@@ -20,17 +20,22 @@ jobs:
             macos-xcode11.2.1-ccache-${{github.ref}}-
             macos-xcode11.2.1-ccache-refs/heads/main-
       - id: install_dependencies
-        run: brew install ossp-uuid boost flex openssl python lua@5.3 xz libssh2 ccache sqliteodbc
+        run: |
+          brew update
+          brew install ossp-uuid boost flex lua@5.3 ccache sqliteodbc automake autoconf
       - id: setup_env
+        name: setup enviroment
         run: |
           echo "PATH=/usr/lib/ccache:/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
           sudo xcode-select -switch /Applications/Xcode_11.2.1.app
-      - id: build
+      - name: build
         run: |
           export PATH="/usr/local/opt/lua@5.3/lib:/usr/local/opt/lua@5.3/include:/usr/local/opt/lua@5.3/bin:$PATH"
           export PKG_CONFIG_PATH="/usr/local/opt/lua@5.3/lib/pkgconfig"
-          ./bootstrap.sh -e -t && cd build  && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_LUA_SCRIPTING=1 -DENABLE_AWS=ON -DENABLE_AZURE=ON -DENABLE_SQL=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && cmake --build . --parallel 4 && make test ARGS="--timeout 300 -j4 --output-on-failure" && make linter
+          ./bootstrap.sh -e -t && cd build  && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_LUA_SCRIPTING=1 -DENABLE_AWS=ON -DENABLE_AZURE=ON -DENABLE_SQL=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j4 --output-on-failure"
   macos_xcode_12_0:
     name: "macos-xcode12.0"
     runs-on: macos-10.15
@@ -50,24 +55,41 @@ jobs:
             macos-xcode12.0-ccache-${{github.ref}}-
             macos-xcode12.0-ccache-refs/heads/main-
       - id: install_dependencies
-        run: brew install ossp-uuid boost flex openssl python lua@5.3 xz libssh2 ccache sqliteodbc
+        run: |
+          brew update
+          brew install ossp-uuid boost flex lua@5.3 ccache sqliteodbc automake autoconf
       - id: setup_env
+        name: setup enviroment
         run: |
           echo "PATH=/usr/lib/ccache:/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
           sudo xcode-select -switch /Applications/Xcode_12.app
-      - id: build
+      - name: build
         run: |
           export PATH="/usr/local/opt/lua@5.3/lib:/usr/local/opt/lua@5.3/include:/usr/local/opt/lua@5.3/bin:$PATH"
           export PKG_CONFIG_PATH="/usr/local/opt/lua@5.3/lib/pkgconfig"
-          ./bootstrap.sh -e -t && cd build  && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_LUA_SCRIPTING=1 -DENABLE_SQL=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && cmake --build . --parallel 4 && make test ARGS="--timeout 300 -j4 --output-on-failure" && make linter
+          ./bootstrap.sh -e -t && cd build  && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_LUA_SCRIPTING=1 -DENABLE_SQL=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j4 --output-on-failure"
+      - name: linter
+        run: cd build && make linter
   windows_VS2017:
     name: "windows-vs2017"
     runs-on: windows-2016
     timeout-minutes: 120
+    env:
+      CLCACHE_DIR: ${{ GITHUB.WORKSPACE }}\clcache
     steps:
       - id: checkout
         uses: actions/checkout@v2
+      - id: cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CLCACHE_DIR }}
+          key: windows-vs2017-clcache-${{github.ref}}-${{github.sha}}
+          restore-keys: |
+            windows-vs2017-clcache-${{github.ref}}-
+            windows-vs2017-clcache-refs/heads/main-
       - name: Setup PATH
         uses: microsoft/setup-msbuild@v1.0.2
       - id: install-sqliteodbc-driver
@@ -75,19 +97,42 @@ jobs:
           Invoke-WebRequest -Uri "http://www.ch-werner.de/sqliteodbc/sqliteodbc.exe" -OutFile "sqliteodbc.exe"
           ./sqliteodbc.exe /S
         shell: powershell
-      - id: build
+      - name: Setup clcache
+        run: |
+          (New-Object System.Net.WebClient).DownloadFile('https://github.com/frerich/clcache/releases/download/v4.2.0/clcache-4.2.0.zip', "$pwd\clcache.zip")
+          $cl_exe_dir = Split-Path -parent $(vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find VC\Tools\MSVC\**\bin\Hostx86\x86\cl.exe | select-object -last 1)
+          Expand-Archive -Force -Path clcache.zip -DestinationPath "$cl_exe_dir";
+          move "$cl_exe_dir\cl.exe" "$cl_exe_dir\cl_original.exe"
+          move "$cl_exe_dir\cl.exe.config" "$cl_exe_dir\cl_original.exe.config"
+          move "$cl_exe_dir\clcache.exe" "$cl_exe_dir\cl.exe"
+          echo "CLCACHE_CL=$cl_exe_dir\cl_original.exe" >> $env:GITHUB_ENV
+          echo "CLCACHE_NODIRECT=1" >> $env:GITHUB_ENV
+      - name: build
         run: |
           PATH %PATH%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x86
           PATH %PATH%;C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\Bin\Roslyn
-          win_build_vs.bat build /CI /S /A /Z
+          win_build_vs.bat build /CI /S /A /Z /PDH /R
+        shell: cmd
+      - name: test
+        run: cd build && ctest --timeout 300 --parallel 8 -C Release --output-on-failure
         shell: cmd
   windows_VS2019:
     name: "windows-vs2019"
     runs-on: windows-2019
-    timeout-minutes: 90
+    timeout-minutes: 120
+    env:
+      CLCACHE_DIR: ${{ GITHUB.WORKSPACE }}\clcache
     steps:
       - id: checkout
         uses: actions/checkout@v2
+      - id: cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CLCACHE_DIR }}
+          key: windows-vs2019-clcache-${{github.ref}}-${{github.sha}}
+          restore-keys: |
+            windows-vs2019-clcache-${{github.ref}}-
+            windows-vs2019-clcache-refs/heads/main-
       - name: Setup PATH
         uses: microsoft/setup-msbuild@v1.0.2
       - id: install-sqliteodbc-driver
@@ -95,11 +140,27 @@ jobs:
           Invoke-WebRequest -Uri "http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe" -OutFile "sqliteodbc_w64.exe"
           ./sqliteodbc_w64.exe /S
         shell: powershell
-      - id: build
+      - name: Setup clcache
+        run: |
+          (New-Object System.Net.WebClient).DownloadFile('https://github.com/frerich/clcache/releases/download/v4.2.0/clcache-4.2.0.zip', "$pwd\clcache.zip")
+          $cl_exe_dir = Split-Path -parent $(vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find VC\Tools\MSVC\**\bin\Hostx64\x64\cl.exe | select-object -last 1)
+          Expand-Archive -Force -Path clcache.zip -DestinationPath "$cl_exe_dir";
+          move "$cl_exe_dir\cl.exe" "$cl_exe_dir\cl_original.exe"
+          move "$cl_exe_dir\cl.exe.config" "$cl_exe_dir\cl_original.exe.config"
+          move "$cl_exe_dir\clcache.exe" "$cl_exe_dir\cl.exe"
+          echo "CLCACHE_CL=$cl_exe_dir\cl_original.exe" >> $env:GITHUB_ENV
+          echo "CLCACHE_NODIRECT=1" >> $env:GITHUB_ENV
+      - name: build
         run: |
           PATH %PATH%;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64
           PATH %PATH%;C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\Roslyn
-          win_build_vs.bat build /2019 /64 /CI /S /A
+          win_build_vs.bat build /2019 /64 /CI /S /A /PDH /L /R
+        shell: cmd
+      - name: test
+        run: cd build && ctest --timeout 300 --parallel 8 -C Release --output-on-failure
+        shell: cmd
+      - name: linter
+        run: cd build && msbuild linter.vcxproj
         shell: cmd
   ubuntu_16_04:
     name: "ubuntu-16.04"
@@ -122,8 +183,10 @@ jobs:
           sudo apt install -y ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
-      - id: build
-        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT .. && cmake --build . --parallel 4   && make test ARGS="--timeout 300 -j2 --output-on-failure"
+      - name: build
+        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT .. && cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j2 --output-on-failure"
   ubuntu_16_04_gcc_4_8:
     name: "ubuntu-16.04-gcc-4.8"
     runs-on: ubuntu-16.04
@@ -149,8 +212,10 @@ jobs:
           sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
           sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
-      - id: build
-        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DENABLE_SQL=ON .. && cmake --build . --parallel 4 && make test ARGS="--timeout 300 -j2 --output-on-failure"
+      - name: build
+        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_RULE_MESSAGES=OFF -DSTRICT_GSL_CHECKS=AUDIT -DENABLE_SQL=ON .. && cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j2 --output-on-failure"
   ubuntu_20_04:
     name: "ubuntu-20.04"
     runs-on: ubuntu-20.04
@@ -169,14 +234,20 @@ jobs:
       - id: install_deps
         run: |
           sudo apt update
-          sudo apt install -y ccache libfl-dev libpcap-dev libboost-all-dev libsqliteodbc
+          sudo apt install -y ccache libfl-dev libpcap-dev libboost-all-dev libsqliteodbc flake8
           sudo ln -s /usr/lib/x86_64-linux-gnu/odbc/libsqlite3odbc.so /usr/lib/x86_64-linux-gnu/libsqlite3odbc.so
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
-      - id: build
-        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DENABLE_BUSTACHE=ON -DENABLE_SQL=ON -DENABLE_PCAP=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && make -j4 VERBOSE=1  && make test ARGS="--timeout 300 -j2 --output-on-failure"
-      - id: shellcheck
+      - name: build
+        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DENABLE_BUSTACHE=ON -DENABLE_SQL=ON -DENABLE_PCAP=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. && make -j4 VERBOSE=1
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j2 --output-on-failure"
+      - name: linter
+        run: cd build && make linter
+      - name: shellcheck
         run: cd build && make shellcheck
+      - id: flake8_check
+        run: cd build && make flake8
   ubuntu_20_04_all_clang:
     name: "ubuntu-20.04-all-clang"
     runs-on: ubuntu-20.04
@@ -199,8 +270,10 @@ jobs:
           sudo ln -s /usr/lib/x86_64-linux-gnu/odbc/libsqlite3odbc.so /usr/lib/x86_64-linux-gnu/libsqlite3odbc.so
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
-      - id: build
-        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DENABLE_JNI=ON -DENABLE_SENSORS=ON -DENABLE_OPENWSMAN=ON -DENABLE_OPENCV=ON -DENABLE_MQTT=ON -DENABLE_GPS=ON -DENABLE_USB_CAMERA=ON -DENABLE_LIBRDKAFKA=ON -DENABLE_OPC=ON -DENABLE_SFTP=ON -DENABLE_MQTT=ON -DENABLE_COAP=ON -DENABLE_PYTHON=ON -DENABLE_SQL=ON -DENABLE_AWS=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. &&  cmake --build . --parallel 4  && make test ARGS="--timeout 300 -j8 --output-on-failure"
+      - name: build
+        run: ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DCMAKE_BUILD_TYPE=Release -DENABLE_JNI=ON -DENABLE_SENSORS=ON -DENABLE_OPENWSMAN=ON -DENABLE_OPENCV=ON -DENABLE_MQTT=ON -DENABLE_GPS=ON -DENABLE_USB_CAMERA=ON -DENABLE_LIBRDKAFKA=ON -DENABLE_OPC=ON -DENABLE_SFTP=ON -DENABLE_COAP=ON -DENABLE_PYTHON=ON -DENABLE_SQL=ON -DENABLE_AWS=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. &&  cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j8 --output-on-failure"
   ubuntu_16_04_all:
     name: "ubuntu-16.04-all"
     runs-on: ubuntu-16.04
@@ -224,8 +297,10 @@ jobs:
           sudo ln -s /usr/lib/x86_64-linux-gnu/odbc/libsqlite3odbc.so /usr/lib/x86_64-linux-gnu/libsqlite3odbc.so
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts > /dev/null
-      - id: build
-        run: sudo mount tmpfs -t tmpfs /tmp && ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DENABLE_OPENWSMAN=ON -DENABLE_OPENCV=ON -DENABLE_MQTT=ON -DENABLE_GPS=ON -DENABLE_USB_CAMERA=ON -DENABLE_LIBRDKAFKA=ON -DENABLE_OPC=ON -DENABLE_SFTP=ON -DENABLE_MQTT=ON -DENABLE_COAP=ON -DENABLE_PYTHON=ON -DENABLE_SQL=ON -DENABLE_AWS=ON -DENABLE_AZURE=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. &&  cmake --build . --parallel 4  && make test ARGS="--timeout 300 -j8 --output-on-failure"
+      - name: build
+        run: sudo mount tmpfs -t tmpfs /tmp && ./bootstrap.sh -e -t && cd build  && cmake -DUSE_SHARED_LIBS= -DENABLE_OPENWSMAN=ON -DENABLE_OPENCV=ON -DENABLE_GPS=ON -DENABLE_USB_CAMERA=ON -DENABLE_LIBRDKAFKA=ON -DENABLE_OPC=ON -DENABLE_SFTP=ON -DENABLE_MQTT=ON -DENABLE_COAP=ON -DENABLE_PYTHON=ON -DENABLE_SQL=ON -DENABLE_AWS=ON -DENABLE_AZURE=ON -DSTRICT_GSL_CHECKS=AUDIT -DFAIL_ON_WARNINGS=ON .. &&  cmake --build . --parallel 4
+      - name: test
+        run: cd build && make test ARGS="--timeout 300 -j8 --output-on-failure"
   debian:
     name: "debian"
     runs-on: ubuntu-18.04

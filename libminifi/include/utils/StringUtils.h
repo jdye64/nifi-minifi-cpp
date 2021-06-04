@@ -75,13 +75,10 @@ struct string_traits<wchar_t>{
 class StringUtils {
  public:
   /**
-   * Converts a string to a boolean
-   * Better handles mixed case.
+   * Checks and converts a string to a boolean
    * @param input input string
-   * @param output output string.
+   * @returns an optional of a boolean: true if the string is "true" (ignoring case), false if it is "false" (ignoring case), nullopt for any other value
    */
-  static bool StringToBool(std::string input, bool &output);
-
   static utils::optional<bool> toBool(const std::string& input);
 
   static std::string toLower(std::string str);
@@ -124,6 +121,18 @@ class StringUtils {
       return false;
     }
     return std::equal(right.cbegin(), right.cend(), left.cbegin(), [](unsigned char lc, unsigned char rc) { return std::tolower(lc) == std::tolower(rc); });
+  }
+
+  static inline bool equals(const char* left, const char* right, bool caseSensitive = true) {
+    if (caseSensitive) {
+      return std::strcmp(left, right) == 0;
+    }
+    size_t left_len = std::strlen(left);
+    size_t right_len = std::strlen(right);
+    if (left_len != right_len) {
+      return false;
+    }
+    return std::equal(right, right + right_len, left, [](unsigned char lc, unsigned char rc) { return std::tolower(lc) == std::tolower(rc); });
   }
 
   static std::vector<std::string> split(const std::string &str, const std::string &delimiter);

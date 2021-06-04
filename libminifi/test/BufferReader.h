@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 
-#ifndef NIFI_MINIFI_CPP_BUFFERREADER_H
-#define NIFI_MINIFI_CPP_BUFFERREADER_H
+#pragma once
+
+#include <algorithm>
+#include <utility>
+#include <memory>
+#include <vector>
 
 #include "FlowFileRecord.h"
 #include "utils/gsl.h"
 
 class BufferReader : public org::apache::nifi::minifi::InputStreamCallback {
  public:
-  explicit BufferReader(std::vector<uint8_t>& buffer) : buffer_(buffer){}
+  explicit BufferReader(std::vector<uint8_t>& buffer) : buffer_(buffer) {}
 
   int write(org::apache::nifi::minifi::io::BaseStream& input, std::size_t len) {
     uint8_t tmpBuffer[4096]{};
@@ -50,5 +54,3 @@ class BufferReader : public org::apache::nifi::minifi::InputStreamCallback {
  private:
   std::vector<uint8_t>& buffer_;
 };
-
-#endif  // NIFI_MINIFI_CPP_BUFFERREADER_H

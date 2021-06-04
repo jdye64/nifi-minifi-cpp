@@ -15,46 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "utils/FileOutputCallback.h"
-#include <vector>
-#include <utility>
-#include <string>
-#include <memory>
+#include "core/state/nodes/AgentInformation.h"
+
 namespace org {
 namespace apache {
 namespace nifi {
 namespace minifi {
-namespace utils {
+namespace state {
+namespace response {
 
-int64_t FileOutputCallback::process(const std::shared_ptr<io::BaseStream>& stream) {
-  if (stream->size() > 0) {
-    file_stream_.write(reinterpret_cast<char*>(const_cast<uint8_t*>(stream->getBuffer())), stream->size());
-    size_ += stream->size();
-  }
-  return size_.load();
-}
+utils::ProcessCpuUsageTracker AgentStatus::cpu_load_tracker_;
+std::mutex AgentStatus::cpu_load_tracker_mutex_;
 
-const std::vector<char> FileOutputCallback::to_string() {
-  std::vector<char> buffer;
-  buffer.insert(std::end(buffer), std::begin(file_), std::end(file_));
-  return buffer;
-}
-
-void FileOutputCallback::close() {
-  is_alive_ = false;
-  file_stream_.close();
-}
-
-size_t FileOutputCallback::getSize() {
-  return size_;
-}
-
-void FileOutputCallback::write(char *data, size_t size) {
-  file_stream_.write(data, size);
-  size_ += size;
-}
-
-} /* namespace utils */
+} /* namespace response */
+} /* namespace state */
 } /* namespace minifi */
 } /* namespace nifi */
 } /* namespace apache */

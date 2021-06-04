@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -16,25 +15,29 @@
  * limitations under the License.
  */
 
-#undef NDEBUG
-#include "HTTPIntegrationBase.h"
-#include "HTTPHandlers.h"
-#include "utils/gsl.h"
+#include "WorkerThread.h"
 
-int main(int argc, char **argv) {
-  const cmd_args args = parse_cmdline_args(argc, argv, "update");
-  C2UpdateHandler handler(args.test_file);
-  VerifyC2UpdateAgent harness(10000);
-  harness.setKeyDir(args.key_dir);
-  harness.setUrl(args.url, &handler);
-  handler.setC2RestResponse(harness.getC2RestUrl(), "agent");
+namespace org { namespace apache { namespace nifi { namespace minifi { namespace extensions { namespace systemd {
 
-  const auto start = std::chrono::system_clock::now();
+namespace detail {
+WorkerThread::WorkerThread()
+    : thread_{&WorkerThread::run, this} {}
 
-  harness.run(args.test_file);
-
-  const auto then = std::chrono::system_clock::now();
-  const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(then - start).count();
-  assert(handler.getCallCount() <= gsl::narrow<size_t>(seconds + 2));
-  return 0;
+WorkerThread::~WorkerThread() {
+  task_queue_.stop();
+  thread_.join();
 }
+
+void WorkerThread::run() noexcept {
+  while (task_queue_.isRunning()) {
+    task_queue_.consumeWait([](std::packaged_task<void()>&& f) { f(); });
+  }
+}
+}  // namespace detail
+
+}  // namespace systemd
+}  // namespace extensions
+}  // namespace minifi
+}  // namespace nifi
+}  // namespace apache
+}  // namespace org

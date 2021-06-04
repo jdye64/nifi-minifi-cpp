@@ -42,13 +42,13 @@ namespace processors {
 // ListenHTTP Class
 class ListenHTTP : public core::Processor {
  public:
-  using FlowFileBufferPair=std::pair<std::shared_ptr<FlowFileRecord>, std::unique_ptr<io::BufferStream>>;
+  using FlowFileBufferPair = std::pair<std::shared_ptr<FlowFileRecord>, std::unique_ptr<io::BufferStream>>;
 
   // Constructor
   /*!
    * Create a new processor
    */
-  ListenHTTP(std::string name, utils::Identifier uuid = utils::Identifier())
+  ListenHTTP(const std::string& name, const utils::Identifier& uuid = {})
       : Processor(name, uuid),
         logger_(logging::LoggerFactory<ListenHTTP>::getLogger()),
         batch_size_(0) {
@@ -195,6 +195,10 @@ class ListenHTTP : public core::Processor {
 
  private:
   static const uint64_t DEFAULT_BUFFER_SIZE;
+
+  core::annotation::Input getInputRequirement() const override {
+    return core::annotation::Input::INPUT_FORBIDDEN;
+  }
 
   void processIncomingFlowFile(core::ProcessSession *session);
   void processRequestBuffer(core::ProcessSession *session);

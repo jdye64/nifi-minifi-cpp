@@ -76,7 +76,7 @@ class HTTPClient : public BaseHTTPClient, public core::Connectable {
  public:
   HTTPClient();
 
-  HTTPClient(std::string name, utils::Identifier uuid);
+  HTTPClient(const std::string& name, const utils::Identifier& uuid);
 
   explicit HTTPClient(const std::string &url, const std::shared_ptr<minifi::controllers::SSLContextService> ssl_context_service = nullptr);
 
@@ -154,12 +154,12 @@ class HTTPClient : public BaseHTTPClient, public core::Connectable {
     keep_alive_idle_ = std::chrono::milliseconds(idle * 1000);
   }
 
-  void setKeepAliveProbe(std::chrono::milliseconds probe){
+  void setKeepAliveProbe(std::chrono::milliseconds probe) {
     keep_alive_probe_ = probe;
   }
 
-  void setKeepAliveIdle(std::chrono::milliseconds idle){
-    keep_alive_idle_= idle;
+  void setKeepAliveIdle(std::chrono::milliseconds idle) {
+    keep_alive_idle_ = idle;
   }
 
 

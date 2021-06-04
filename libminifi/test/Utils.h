@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include "rapidjson/document.h"
 
 #define FIELD_ACCESSOR(field) \
@@ -61,5 +62,4 @@ void verifyJSON(const std::string& actual_str, const std::string& expected_str, 
   } else {
     matchJSON(actual, expected);
   }
-
 }

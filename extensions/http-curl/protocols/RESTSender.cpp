@@ -25,10 +25,10 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <limits>
 #include "utils/file/FileUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/file/FileManager.h"
-#include "utils/FileOutputCallback.h"
 
 namespace org {
 namespace apache {
@@ -38,11 +38,12 @@ namespace c2 {
 
 RESTSender::RESTSender(const std::string &name, const utils::Identifier &uuid)
     : C2Protocol(name, uuid),
-      logger_(logging::LoggerFactory<Connectable>::getLogger()) {
+      logger_(logging::LoggerFactory<RESTSender>::getLogger()) {
 }
 
 void RESTSender::initialize(core::controller::ControllerServiceProvider* controller, const std::shared_ptr<Configure> &configure) {
   C2Protocol::initialize(controller, configure);
+  RESTProtocol::initialize(controller, configure);
   // base URL when one is not specified.
   if (nullptr != configure) {
     std::string update_str, ssl_context_service_str;
@@ -54,8 +55,6 @@ void RESTSender::initialize(core::controller::ControllerServiceProvider* control
         ssl_context_service_ = std::static_pointer_cast<minifi::controllers::SSLContextService>(service);
       }
     }
-    configure->get("nifi.c2.rest.heartbeat.minimize.updates", "c2.rest.heartbeat.minimize.updates", update_str);
-    utils::StringUtils::StringToBool(update_str, minimize_updates_);
   }
   logger_->log_debug("Submitting to %s", rest_uri_);
 }
@@ -70,7 +69,7 @@ C2Payload RESTSender::consumePayload(const std::string &url, const C2Payload &pa
 }
 
 C2Payload RESTSender::consumePayload(const C2Payload &payload, Direction direction, bool async) {
-  if (payload.getOperation() == ACKNOWLEDGE) {
+  if (payload.getOperation() == Operation::ACKNOWLEDGE) {
     return consumePayload(ack_uri_, payload, direction, async);
   }
   return consumePayload(rest_uri_, payload, direction, async);
@@ -128,7 +127,7 @@ const C2Payload RESTSender::sendPayload(const std::string url, const Direction d
     client.set_request_method("GET");
   }
 
-  if (payload.getOperation() == TRANSFER) {
+  if (payload.getOperation() == Operation::TRANSFER) {
     file_callback = std::unique_ptr<utils::ByteOutputCallback>(new utils::ByteOutputCallback(std::numeric_limits<size_t>::max()));
     read.pos = 0;
     read.ptr = file_callback.get();
@@ -139,6 +138,13 @@ const C2Payload RESTSender::sendPayload(const std::string url, const Direction d
   }
   bool isOkay = client.submit();
   int64_t respCode = client.getResponseCode();
+  const bool clientError = 400 <= respCode && respCode < 500;
+  const bool serverError = 500 <= respCode && respCode < 600;
+  if (clientError || serverError) {
+    logger_->log_error("Error response code '" "%" PRId64 "' from '%s'", respCode, url);
+  } else {
+    logger_->log_debug("Response code '" "%" PRId64 "' from '%s'", respCode, url);
+  }
   auto rs = client.getResponseBody();
   if (isOkay && respCode) {
     if (payload.isRaw()) {

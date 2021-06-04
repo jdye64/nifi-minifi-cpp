@@ -67,8 +67,6 @@ C2Agent::C2Agent(core::controller::ControllerServiceProvider *controller,
       protocol_(nullptr),
       logger_(logging::LoggerFactory<C2Agent>::getLogger()),
       thread_pool_(2, false, nullptr, "C2 threadpool") {
-  allow_updates_ = true;
-
   manifest_sent_ = false;
 
   running_c2_configuration = std::make_shared<Configure>();
@@ -141,21 +139,21 @@ void C2Agent::configure(const std::shared_ptr<Configure> &configure, bool reconf
 
   if (!reconfigure) {
     if (!configure->get("nifi.c2.agent.protocol.class", "c2.agent.protocol.class", clazz)) {
-      clazz = "CoapProtocol";
+      clazz = "RESTSender";
     }
     logger_->log_info("Class is %s", clazz);
 
     auto protocol = core::ClassLoader::getDefaultClassLoader().instantiateRaw(clazz, clazz);
     if (protocol == nullptr) {
       logger_->log_warn("Class %s not found", clazz);
-      protocol = core::ClassLoader::getDefaultClassLoader().instantiateRaw("CoapProtocol", "CoapProtocol");
+      protocol = core::ClassLoader::getDefaultClassLoader().instantiateRaw("RESTSender", "RESTSender");
       if (!protocol) {
-        const char* errmsg = "Attempted to load CoapProtocol. To enable C2, please specify an active protocol for this agent.";
+        const char* errmsg = "Attempted to load RESTSender. To enable C2, please specify an active protocol for this agent.";
         logger_->log_error(errmsg);
         throw minifi::Exception{ minifi::GENERAL_EXCEPTION, errmsg };
       }
 
-      logger_->log_info("Class is CoapProtocol");
+      logger_->log_info("Class is RESTSender");
     }
 
     // Since !reconfigure, the call comes from the ctor and protocol_ is null, therefore no delete is necessary
@@ -185,73 +183,43 @@ void C2Agent::configure(const std::shared_ptr<Configure> &configure, bool reconf
       heart_beat_period_ = 3000;
   }
 
-  std::string update_settings;
-  if (configure->get("nifi.c2.agent.update.allow", "c2.agent.update.allow", update_settings) && utils::StringUtils::StringToBool(update_settings, allow_updates_)) {
-    // allow the agent to be updated. we then need to get an update command to execute after
-  }
-
-  if (allow_updates_) {
-    if (!configure->get("nifi.c2.agent.update.command", "c2.agent.update.command", update_command_)) {
-      std::string cwd = utils::Environment::getCurrentWorkingDirectory();
-      if (cwd.empty()) {
-        logger_->log_error("Could not set the update command because the working directory could not be determined");
-      } else {
-        update_command_ = cwd + "/minifi.sh update";
-      }
-    }
-
-    if (!configure->get("nifi.c2.agent.update.temp.location", "c2.agent.update.temp.location", update_location_)) {
-      std::string cwd = utils::Environment::getCurrentWorkingDirectory();
-      if (cwd.empty()) {
-        logger_->log_error("Could not set the update location because the working directory could not be determined");
-      } else {
-        update_location_ = cwd + "/minifi.update";
-      }
-    }
-
-    // if not defined we won't be able to update
-    configure->get("nifi.c2.agent.bin.location", "c2.agent.bin.location", bin_location_);
-  }
   std::string heartbeat_reporters;
   if (configure->get("nifi.c2.agent.heartbeat.reporter.classes", "c2.agent.heartbeat.reporter.classes", heartbeat_reporters)) {
-    std::vector<std::string> reporters = utils::StringUtils::split(heartbeat_reporters, ",");
+    std::vector<std::string> reporters = utils::StringUtils::splitAndTrim(heartbeat_reporters, ",");
     std::lock_guard<std::mutex> lock(heartbeat_mutex);
     for (const auto& reporter : reporters) {
-      auto heartbeat_reporter_obj = core::ClassLoader::getDefaultClassLoader().instantiate(reporter, reporter);
+      auto heartbeat_reporter_obj = core::ClassLoader::getDefaultClassLoader().instantiate<HeartbeatReporter>(reporter, reporter);
       if (heartbeat_reporter_obj == nullptr) {
-        logger_->log_debug("Could not instantiate %s", reporter);
+        logger_->log_error("Could not instantiate %s", reporter);
       } else {
-        std::shared_ptr<HeartBeatReporter> shp_reporter = std::static_pointer_cast<HeartBeatReporter>(heartbeat_reporter_obj);
-        shp_reporter->initialize(controller_, update_sink_, configuration_);
-        heartbeat_protocols_.push_back(shp_reporter);
+        heartbeat_reporter_obj->initialize(controller_, update_sink_, configuration_);
+        heartbeat_protocols_.push_back(heartbeat_reporter_obj);
       }
     }
   }
 
   std::string trigger_classes;
   if (configure->get("nifi.c2.agent.trigger.classes", "c2.agent.trigger.classes", trigger_classes)) {
-    std::vector<std::string> triggers = utils::StringUtils::split(trigger_classes, ",");
+    std::vector<std::string> triggers = utils::StringUtils::splitAndTrim(trigger_classes, ",");
     std::lock_guard<std::mutex> lock(heartbeat_mutex);
     for (const auto& trigger : triggers) {
-      auto trigger_obj = core::ClassLoader::getDefaultClassLoader().instantiate(trigger, trigger);
+      auto trigger_obj = core::ClassLoader::getDefaultClassLoader().instantiate<C2Trigger>(trigger, trigger);
       if (trigger_obj == nullptr) {
-        logger_->log_debug("Could not instantiate %s", trigger);
+        logger_->log_error("Could not instantiate %s", trigger);
       } else {
-        std::shared_ptr<C2Trigger> trg_impl = std::static_pointer_cast<C2Trigger>(trigger_obj);
-        trg_impl->initialize(configuration_);
-        triggers_.push_back(trg_impl);
+        trigger_obj->initialize(configuration_);
+        triggers_.push_back(trigger_obj);
       }
     }
   }
 
-  auto base_reporter = "ControllerSocketProtocol";
-  auto heartbeat_reporter_obj = core::ClassLoader::getDefaultClassLoader().instantiate(base_reporter, base_reporter);
+  std::string base_reporter = "ControllerSocketProtocol";
+  auto heartbeat_reporter_obj = core::ClassLoader::getDefaultClassLoader().instantiate<HeartbeatReporter>(base_reporter, base_reporter);
   if (heartbeat_reporter_obj == nullptr) {
-    logger_->log_debug("Could not instantiate %s", base_reporter);
+    logger_->log_error("Could not instantiate %s", base_reporter);
   } else {
-    std::shared_ptr<HeartBeatReporter> shp_reporter = std::static_pointer_cast<HeartBeatReporter>(heartbeat_reporter_obj);
-    shp_reporter->initialize(controller_, update_sink_, configuration_);
-    heartbeat_protocols_.push_back(shp_reporter);
+    heartbeat_reporter_obj->initialize(controller_, update_sink_, configuration_);
+    heartbeat_protocols_.push_back(heartbeat_reporter_obj);
   }
 }
 
@@ -321,7 +289,7 @@ void C2Agent::extractPayload(const C2Payload &resp) {
   }
   switch (resp.getStatus().getState()) {
     case state::UpdateState::INITIATE:
-      logger_->log_debug("Received initiation event from protocol");
+      logger_->log_trace("Received initiation event from protocol");
       break;
     case state::UpdateState::READ_COMPLETE:
       logger_->log_trace("Received Ack from Server");
@@ -331,7 +299,10 @@ void C2Agent::extractPayload(const C2Payload &resp) {
       }
       break;
     case state::UpdateState::FULLY_APPLIED:
-      logger_->log_debug("Received fully applied event from protocol");
+      logger_->log_trace("Received fully applied event from protocol");
+      break;
+    case state::UpdateState::NESTED:  // multiple updates embedded into one
+      logger_->log_trace("Received nested event from protocol");
       break;
     case state::UpdateState::PARTIALLY_APPLIED:
       logger_->log_debug("Received partially applied event from protocol");
@@ -340,21 +311,19 @@ void C2Agent::extractPayload(const C2Payload &resp) {
       logger_->log_debug("Received not applied event from protocol");
       break;
     case state::UpdateState::SET_ERROR:
-      logger_->log_debug("Received error event from protocol");
+      logger_->log_debug("Received set error event from protocol");
       break;
     case state::UpdateState::READ_ERROR:
-      logger_->log_debug("Received error event from protocol");
+      logger_->log_debug("Received read error event from protocol");
       break;
-    case state::UpdateState::NESTED:  // multiple updates embedded into one
-
     default:
-      logger_->log_debug("Received nested event from protocol");
+      logger_->log_error("Received unknown event (%d) from protocol", static_cast<int>(resp.getStatus().getState()));
       break;
   }
 }
 
 void C2Agent::handle_c2_server_response(const C2ContentResponse &resp) {
-  switch (resp.op) {
+  switch (resp.op.value()) {
     case Operation::CLEAR:
       // we've been told to clear something
       if (resp.name == "connection") {
@@ -461,10 +430,10 @@ C2Payload C2Agent::prepareConfigurationOptions(const C2ContentResponse &resp) co
     C2Payload options(Operation::ACKNOWLEDGE);
     options.setLabel("configuration_options");
     std::string value;
-    for (auto key : keys) {
-      C2ContentResponse option(Operation::ACKNOWLEDGE);
-      option.name = key;
+    for (const auto& key : keys) {
       if (configuration_->get(key, value)) {
+        C2ContentResponse option(Operation::ACKNOWLEDGE);
+        option.name = key;
         option.operation_arguments[key] = value;
         options.addContent(std::move(option));
       }
@@ -602,52 +571,6 @@ void C2Agent::handle_update(const C2ContentResponse &resp) {
       configure(running_c2_configuration);
     C2Payload response(Operation::ACKNOWLEDGE, state::UpdateState::FULLY_APPLIED, resp.ident, true);
     enqueue_c2_response(std::move(response));
-  } else if (resp.name == "agent") {
-    // we are upgrading the agent. therefore we must be given a location
-    auto location = resp.operation_arguments.find("location");
-    auto isPartialStr = resp.operation_arguments.find("partial");
-
-    bool partial_update = false;
-    if (isPartialStr != std::end(resp.operation_arguments)) {
-      partial_update = utils::StringUtils::equalsIgnoreCase(isPartialStr->second.to_string(), "true");
-    }
-    if (location != resp.operation_arguments.end()) {
-      logger_->log_trace("Update agent with location %s", location->second.to_string());
-      // we will not have a raw payload
-      C2Payload payload(Operation::TRANSFER, true);
-
-      C2Payload &&response = protocol_.load()->consumePayload(location->second.to_string(), payload, RECEIVE, false);
-
-      auto raw_data = response.getRawData();
-
-      std::string file_path = std::string(raw_data.data(), raw_data.size());
-
-      logger_->log_trace("Update requested with file %s", file_path);
-
-      // acknowledge the transfer. For a transfer, the response identifier should be the checksum of the
-      // file transferred.
-      C2Payload transfer_response(Operation::ACKNOWLEDGE, state::UpdateState::FULLY_APPLIED, response.getIdentifier(), true);
-
-      protocol_.load()->consumePayload(std::move(transfer_response));
-
-      if (allow_updates_) {
-        logger_->log_trace("Update allowed from file %s", file_path);
-        if (partial_update && !bin_location_.empty()) {
-          utils::file::DiffUtils::apply_binary_diff(bin_location_.c_str(), file_path.c_str(), update_location_.c_str());
-        } else {
-          utils::file::FileUtils::copy_file(file_path, update_location_);
-        }
-        // remove the downloaded file.
-        logger_->log_trace("removing file %s", file_path);
-        std::remove(file_path.c_str());
-        update_agent();
-      } else {
-        logger_->log_trace("Update disallowed from file %s", file_path);
-      }
-
-    } else {
-      logger_->log_trace("No location present");
-    }
   } else {
     C2Payload response(Operation::ACKNOWLEDGE, state::UpdateState::NOT_APPLIED, resp.ident, true);
     enqueue_c2_response(std::move(response));
@@ -677,15 +600,7 @@ void C2Agent::restart_agent() {
 
   std::string command = cwd + "/bin/minifi.sh restart";
   if (system(command.c_str()) != 0) {
-    logger_->log_warn("System command '%s' failed", command);
-  }
-}
-
-void C2Agent::update_agent() {
-  if (system(update_command_.c_str()) == 0) {
-    logger_->log_info("Executed update command '%s'", update_command_);
-  } else {
-    logger_->log_warn("Update command %s failed; may not have command processor", update_command_);
+    logger_->log_error("System command '%s' failed", command);
   }
 }
 
@@ -733,11 +648,13 @@ utils::TaskRescheduleInfo C2Agent::produce() {
 }
 
 utils::TaskRescheduleInfo C2Agent::consume() {
-  const auto consume_success = responses.consume([this] (C2Payload&& payload) {
-    extractPayload(std::move(payload));
-  });
-  if (!consume_success) {
-    extractPayload(C2Payload{ Operation::HEARTBEAT });
+  if (!responses.empty()) {
+    const auto consume_success = responses.consume([this] (C2Payload&& payload) {
+      extractPayload(std::move(payload));
+    });
+    if (!consume_success) {
+      extractPayload(C2Payload{ Operation::HEARTBEAT });
+    }
   }
   return utils::TaskRescheduleInfo::RetryIn(std::chrono::milliseconds(C2RESPONSE_POLL_MS));
 }
@@ -750,8 +667,8 @@ utils::optional<std::string> C2Agent::fetchFlow(const std::string& uri) const {
       return content;
     }
   }
-  // couldn't open as file and we have no protocol to request the file from
   if (protocol_.load() == nullptr) {
+    logger_->log_error("Couldn't open '%s' as file and we have no protocol to request the file from", uri);
     return {};
   }
 
@@ -760,22 +677,20 @@ utils::optional<std::string> C2Agent::fetchFlow(const std::string& uri) const {
     std::stringstream adjusted_url;
     std::string base;
     if (configuration_->get(minifi::Configure::nifi_c2_flow_base_url, base)) {
+      base = utils::StringUtils::trim(base);
       adjusted_url << base;
       if (!utils::StringUtils::endsWith(base, "/")) {
         adjusted_url << "/";
       }
       adjusted_url << uri;
       resolved_url = adjusted_url.str();
-    } else if (configuration_->get("c2.rest.url", base)) {
-      std::string host, protocol;
-      int port = -1;
-      utils::parse_url(&base, &host, &port, &protocol);
-      adjusted_url << protocol << host;
-      if (port > 0) {
-        adjusted_url << ":" << port;
+    } else if (configuration_->get("nifi.c2.rest.url", "c2.rest.url", base)) {
+      utils::URL base_url{utils::StringUtils::trim(base)};
+      if (!base_url.isValid()) {
+        logger_->log_error("Could not parse C2 REST URL '%s'", base);
+        return {};
       }
-      adjusted_url << "/c2/api/" << uri;
-      resolved_url = adjusted_url.str();
+      resolved_url = base_url.hostPort() + "/c2/api/" + uri;
     }
   }
 
@@ -796,7 +711,7 @@ bool C2Agent::handleConfigurationUpdate(const C2ContentResponse &resp) {
     file_uri = url->second.to_string();
     utils::optional<std::string> optional_configuration_str = fetchFlow(file_uri);
     if (!optional_configuration_str) {
-      logger_->log_debug("Couldn't load new flow configuration from: \"%s\"", file_uri);
+      logger_->log_error("Couldn't load new flow configuration from: \"%s\"", file_uri);
       C2Payload response(Operation::ACKNOWLEDGE, state::UpdateState::SET_ERROR, resp.ident, true);
       response.setRawData("Error while applying flow. Couldn't load flow configuration.");
       enqueue_c2_response(std::move(response));
@@ -807,7 +722,7 @@ bool C2Agent::handleConfigurationUpdate(const C2ContentResponse &resp) {
     logger_->log_debug("Did not have location within %s", resp.ident);
     auto update_text = resp.operation_arguments.find("configuration_data");
     if (update_text == resp.operation_arguments.end()) {
-      logger_->log_debug("Neither the config file location nor the data is provided");
+      logger_->log_error("Neither the config file location nor the data is provided");
       C2Payload response(Operation::ACKNOWLEDGE, state::UpdateState::SET_ERROR, resp.ident, true);
       response.setRawData("Error while applying flow. Neither the config file location nor the data is provided.");
       enqueue_c2_response(std::move(response));
@@ -826,7 +741,7 @@ bool C2Agent::handleConfigurationUpdate(const C2ContentResponse &resp) {
 
   int16_t err = {update_sink_->applyUpdate(file_uri, configuration_str, should_persist)};
   if (err != 0) {
-    logger_->log_debug("Flow configuration update failed with error code %" PRIi16, err);
+    logger_->log_error("Flow configuration update failed with error code %" PRIi16, err);
     C2Payload response(Operation::ACKNOWLEDGE, state::UpdateState::SET_ERROR, resp.ident, true);
     response.setRawData("Error while applying flow. Likely missing processors");
     enqueue_c2_response(std::move(response));

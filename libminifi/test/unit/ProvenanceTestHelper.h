@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LIBMINIFI_TEST_UNIT_PROVENANCETESTHELPER_H_
-#define LIBMINIFI_TEST_UNIT_PROVENANCETESTHELPER_H_
+
+#pragma once
 
 #include <atomic>
 #include <cstdint>
@@ -81,7 +81,7 @@ class TestRepository : public core::Repository {
   }
 
   bool MultiPut(const std::vector<std::pair<std::string, std::unique_ptr<minifi::io::BufferStream>>>& data) override {
-    for (const auto& item: data) {
+    for (const auto& item : data) {
       if (!Put(item.first, item.second->getBuffer(), item.second->size())) {
         return false;
       }
@@ -122,8 +122,7 @@ class TestRepository : public core::Repository {
         break;
       }
       std::shared_ptr<core::SerializableComponent> eventRead = store.at(max_size);
-      if (eventRead->DeSerialize((uint8_t*) entry.second.data(), entry.second.length())) {
-      }
+      eventRead->DeSerialize(reinterpret_cast<const uint8_t*>(entry.second.data()), entry.second.length());
       ++max_size;
     }
     return true;
@@ -238,7 +237,6 @@ class TestFlowRepository : public core::Repository {
 };
 
 class TestFlowController : public minifi::FlowController {
-
  public:
   TestFlowController(std::shared_ptr<core::Repository> repo, std::shared_ptr<core::Repository> flow_file_repo, std::shared_ptr<core::ContentRepository> /*content_repo*/)
       : minifi::FlowController(repo, flow_file_repo, std::make_shared<minifi::Configure>(), nullptr, std::make_shared<core::repository::VolatileContentRepository>(), "", true) {
@@ -278,19 +276,19 @@ class TestFlowController : public minifi::FlowController {
     return true;
   }
 
-  std::shared_ptr<core::Processor> createProcessor(std::string /*name*/, utils::Identifier& /*uuid*/) {
+  std::shared_ptr<core::Processor> createProcessor(const std::string& /*name*/, const utils::Identifier& /*uuid*/) {
     return 0;
   }
 
-  core::ProcessGroup *createRootProcessGroup(std::string /*name*/, utils::Identifier& /*uuid*/) {
+  core::ProcessGroup *createRootProcessGroup(const std::string& /*name*/, const utils::Identifier& /*uuid*/) {
     return 0;
   }
 
-  core::ProcessGroup *createRemoteProcessGroup(std::string /*name*/, utils::Identifier& /*uuid*/) {
+  core::ProcessGroup *createRemoteProcessGroup(const std::string& /*name*/, const utils::Identifier& /*uuid*/) {
     return 0;
   }
 
-  std::shared_ptr<minifi::Connection> createConnection(std::string /*name*/, utils::Identifier& /*uuid*/) {
+  std::shared_ptr<minifi::Connection> createConnection(const std::string& /*name*/, const utils::Identifier& /*uuid*/) {
     return 0;
   }
 };
@@ -299,4 +297,3 @@ class TestFlowController : public minifi::FlowController {
 #elif defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif
-#endif /* LIBMINIFI_TEST_UNIT_PROVENANCETESTHELPER_H_ */

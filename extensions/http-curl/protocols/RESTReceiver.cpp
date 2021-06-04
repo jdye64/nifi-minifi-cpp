@@ -39,18 +39,18 @@ int ssl_protocol_en(void* /*ssl_context*/, void* /*user_data*/) {
   return 0;
 }
 
-RESTReceiver::RESTReceiver(std::string name, utils::Identifier uuid)
-    : HeartBeatReporter(name, uuid),
+RESTReceiver::RESTReceiver(const std::string& name, const utils::Identifier& uuid)
+    : HeartbeatReporter(name, uuid),
       logger_(logging::LoggerFactory<RESTReceiver>::getLogger()) {
 }
 
 void RESTReceiver::initialize(core::controller::ControllerServiceProvider* controller, const std::shared_ptr<state::StateMonitor> &updateSink, const std::shared_ptr<Configure> &configure) {
-  HeartBeatReporter::initialize(controller, updateSink, configure);
+  HeartbeatReporter::initialize(controller, updateSink, configure);
   logger_->log_trace("Initializing rest receiver");
   if (nullptr != configuration_) {
-    std::string listeningPort,rootUri="/", caCert;
-    configuration_->get("nifi.c2.rest.listener.port","c2.rest.listener.port", listeningPort);
-    configuration_->get("nifi.c2.rest.listener.cacert","c2.rest.listener.cacert", caCert);
+    std::string listeningPort, rootUri = "/", caCert;
+    configuration_->get("nifi.c2.rest.listener.port", "c2.rest.listener.port", listeningPort);
+    configuration_->get("nifi.c2.rest.listener.cacert", "c2.rest.listener.cacert", caCert);
     if (!listeningPort.empty() && !rootUri.empty()) {
       handler = std::unique_ptr<ListeningProtocol>(new ListeningProtocol());
       if (!caCert.empty()) {

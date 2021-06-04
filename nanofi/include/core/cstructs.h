@@ -28,11 +28,11 @@
 #endif
 #ifndef DEPRECATED
 #ifdef _MSC_VER
-#define DEPRECATED(v,ev) __declspec(deprecated)
+#define DEPRECATED(v, ev) __declspec(deprecated)
 #elif defined(__GNUC__) | defined(__clang__)
-#define DEPRECATED(v,ev) __attribute__((__deprecated__))
+#define DEPRECATED(v, ev) __attribute__((__deprecated__))
 #else
-#define DEPRECATED(v,ev)
+#define DEPRECATED(v, ev)
 #endif
 #endif
 
@@ -47,11 +47,9 @@ typedef struct {
  * Nifi instance struct
  */
 typedef struct {
-
   void *instance_ptr;
 
   nifi_port port;
-
 } nifi_instance;
 
 /****
@@ -122,7 +120,6 @@ typedef struct {
   void * ffp;
 
   uint8_t keepContent;
-
 } flow_file_record;
 
 typedef struct flow flow;

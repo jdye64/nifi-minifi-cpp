@@ -78,7 +78,6 @@ sem_t *running;
 #ifdef WIN32
 BOOL WINAPI consoleSignalHandler(DWORD signal) {
   if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT) {
-    
     sem_post(running);
     if (sem_wait(running) == -1)
       perror("sem_wait");
@@ -156,7 +155,6 @@ int main(int argc, char **argv) {
 
   running = sem_open("/MiNiFiMain", O_CREAT, 0644, 0);
   if (running == SEM_FAILED || running == 0) {
-
     logger->log_error("could not initialize semaphore");
     perror("initialization failure");
   }
@@ -237,7 +235,7 @@ int main(int argc, char **argv) {
       }
       std::ofstream outref(argv[3]);
       dumpDocs(configure, argv[2], outref);
-    } else{
+    } else {
       dumpDocs(configure, argv[2], std::cout);
     }
     exit(0);
@@ -386,13 +384,13 @@ int main(int argc, char **argv) {
    */
   int ret_val;
   while ((ret_val = sem_wait(running)) == -1 && errno == EINTR);
-  if(ret_val == -1) perror("sem_wait");
+  if (ret_val == -1) perror("sem_wait");
 
   while ((ret_val = sem_close(running)) == -1 && errno == EINTR);
-  if(ret_val == -1) perror("sem_close");
+  if (ret_val == -1) perror("sem_close");
 
   while ((ret_val = sem_unlink("/MiNiFiMain")) == -1 && errno == EINTR);
-  if(ret_val == -1) perror("sem_unlink");
+  if (ret_val == -1) perror("sem_unlink");
 
   disk_space_watchdog = nullptr;
 

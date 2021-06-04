@@ -34,10 +34,9 @@ namespace minifi {
 namespace processors {
 
 class CaptureRTSPFrame : public core::Processor {
-
  public:
 
-  explicit CaptureRTSPFrame(const std::string &name, utils::Identifier uuid = utils::Identifier())
+  explicit CaptureRTSPFrame(const std::string &name, const utils::Identifier &uuid = {})
       : Processor(name, uuid),
         logger_(logging::LoggerFactory<CaptureRTSPFrame>::getLogger()) {
   }
@@ -128,7 +127,6 @@ class CaptureRTSPFrame : public core::Processor {
 //  std::mutex mutex_;
 //
 //  std::shared_ptr<minifi::controllers::SSLContextService> ssl_service_;
-
 };
 
 REGISTER_RESOURCE(CaptureRTSPFrame, "Captures a frame from the RTSP stream at specified intervals."); // NOLINT

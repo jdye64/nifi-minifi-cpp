@@ -9,6 +9,7 @@
 - [CapturePacket](#capturepacket)
 - [CaptureRTSPFrame](#capturertspframe)
 - [CompressContent](#compresscontent)
+- [ConsumeJournald](#consumejournald)
 - [ConsumeKafka](#consumekafka)
 - [ConsumeMQTT](#consumemqtt)
 - [DeleteS3Object](#deletes3object)
@@ -36,6 +37,7 @@
 - [ManipulateArchive](#manipulatearchive)
 - [MergeContent](#mergecontent)
 - [MotionDetector](#motiondetector)
+- [PerformanceDataMonitor](#performancedatamonitor)
 - [PublishKafka](#publishkafka)
 - [PublishMQTT](#publishmqtt)
 - [PutAzureBlobStorage](#putazureblobstorage)
@@ -183,6 +185,30 @@ In the list below, the names of required properties appear in bold. Any other pr
 | - | - |
 |failure|FlowFiles will be transferred to the failure relationship if they fail to compress/decompress|
 |success|FlowFiles will be transferred to the success relationship after successfully being compressed or decompressed|
+
+
+## ConsumeJournald
+### Description
+Consume systemd-journald journal messages. Available on Linux only.
+
+### Properties
+All properties are required with a default value, making them effectively optional. None of the properties support the NiFi Expression Language.
+
+|         Name         |  Default Value  |                                  Allowable Values                                  |                                                                       Description                                                                        |
+| -------------------- | --------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|      Batch Size      |      1000       |                                  Positive numbers                                  | The maximum number of entries processed in a single execution.                                                                                           |
+|    Payload Format    |     Syslog      |                                   Raw<br>Syslog                                    | Configures flow file content formatting.<br>Raw: only the message.<br>Syslog: similar to syslog or journalctl output.                                    |
+|  Include Timestamp   |      true       |                                   true<br>false                                    | Include message timestamp in the 'timestamp' attribute.                                                                                                  |
+|     Journal Type     |     System      |                               User<br>System<br>Both                               | Type of journal to consume.                                                                                                                              |
+| Process Old Messages |      false      |                                   true<br>false                                    | Process events created before the first usage (schedule) of the processor instance.                                                                      |
+|   Timestamp Format   |    %x %X %Z     | [date format](https://howardhinnant.github.io/date/date.html#to_stream_formatting) | Format string to use when creating the timestamp attribute or writing messages in the syslog format. ISO/ISO 8601/ISO8601 are equivalent to "%FT%T%Ez".  |
+
+### Relationships
+
+|  Name   |          Description           |
+| ------- | ------------------------------ |
+| success | Journal messages as flow files |
+
 
 ## ConsumeKafka
 
@@ -536,6 +562,7 @@ In the list below, the names of required properties appear in bold. Any other pr
 |Data Format|Binary|Text<br>Binary<br>|Specifies whether the data should be Text or Binary|
 |File Size|1 kB||The size of the file that will be used|
 |Unique FlowFiles|true||If true, each FlowFile that is generated will be unique. If false, a random value will be generated and all FlowFiles|
+|Custom Text|||If Data Format is text and if Unique FlowFiles is false, then this custom text will be used as content of the generated FlowFiles and the File Size will be ignored. Finally, if Expression Language is used, evaluation will be performed only once per batch of generated FlowFiles<br/>**Supports Expression Language: true**|
 ### Relationships
 
 | Name | Description |
@@ -954,6 +981,130 @@ In the list below, the names of required properties appear in bold. Any other pr
 |success|Successful to detect motion|
 
 
+## PerformanceDataMonitor
+
+### Description
+This Windows only processor can create FlowFiles populated with various performance data with the help of Windows Performance Counters.
+Windows Performance Counters provide a high-level abstraction layer with a consistent interface for collecting various kinds of system data such as CPU, memory, and disk usage statistics.
+### Properties
+
+In the list below, the names of required properties appear in bold. Any other properties (not in bold) are considered optional. The table also indicates any default values, and whether a property supports the NiFi Expression Language.
+
+| Name | Default Value | Allowable Values | Description |
+| - | - | - | - |
+|Predefined Groups||CPU<br>IO<br>Disk<br>Network<br>Memory<br>System<br>Process|Comma separated list from the allowable values, to monitor multiple common Windows Performance counters related to these groups. (e.g. "CPU,Network")|
+|Custom PDH Counters|||Comma separated list of Windows Performance Counters to monitor. (e.g. "\\System\\Threads,\\Process(*)\\ID Process")|
+|**Output Format**|JSON|JSON<br>OpenTelemetry|The output format of the new flowfile|
+|Round to decimal places|3|integers|The number of decimal places to round the values to (blank for no rounding)|
+
+#### Predefined Groups
+<ul>
+  <li>CPU
+    <ul>
+      <li>\Processor(*)\% Processor Time</li>
+      <li>\Processor(*)\% User Time</li>
+      <li>\Processor(*)\% Privileged Time</li>
+    </ul>
+  </li>
+  <li>IO
+    <ul>
+      <li>\Process(_Total)\IO Read Bytes/sec</li>
+      <li>\Process(_Total)\IO Write Bytes/sec</li>
+    </ul>
+  </li>
+  <li>Disk
+    <ul>
+      <li>\LogicalDisk(*)\% Free Space</li>
+      <li>\LogicalDisk(*)\Free Megabytes</li>
+      <li>\PhysicalDisk(*)\% Disk Read Time</li>
+      <li>\PhysicalDisk(*)\% Disk Time</li>
+      <li>\PhysicalDisk(*)\% Disk Write Time</li>
+      <li>\PhysicalDisk(*)\% Idle Time</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Bytes/Transfer</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Bytes/Read</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Bytes/Write</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Write Queue Length</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Read Queue Length</li>
+      <li>\PhysicalDisk(*)\Avg. Disk Queue Length</li>
+      <li>\PhysicalDisk(*)\Avg. Disk sec/Transfer</li>
+      <li>\PhysicalDisk(*)\Avg. Disk sec/Read</li>
+      <li>\PhysicalDisk(*)\Avg. Disk sec/Write</li>
+      <li>\PhysicalDisk(*)\Current Disk Queue Length</li>
+      <li>\PhysicalDisk(*)\Disk Transfers/sec</li>
+      <li>\PhysicalDisk(*)\Disk Reads/sec</li>
+      <li>\PhysicalDisk(*)\Disk Writes/sec</li>
+      <li>\PhysicalDisk(*)\Disk Bytes/sec</li>
+      <li>\PhysicalDisk(*)\Disk Read Bytes/sec</li>
+      <li>\PhysicalDisk(*)\Disk Write Bytes/sec</li>
+      <li>\PhysicalDisk(*)\Split IO/Sec</li>
+    </ul>
+  </li>
+  <li>Network
+    <ul>
+      <li>\Network Interface(*)\Bytes Received/sec</li>
+      <li>\Network Interface(*)\Bytes Sent/sec</li>
+      <li>\Network Interface(*)\Bytes Total/sec</li>
+      <li>\Network Interface(*)\Current Bandwidth</li>
+      <li>\Network Interface(*)\Packets/sec</li>
+      <li>\Network Interface(*)\Packets Received/sec</li>
+      <li>\Network Interface(*)\Packets Sent/sec</li>
+      <li>\Network Interface(*)\Packets Received Discarded</li>
+      <li>\Network Interface(*)\Packets Received Errors</li>
+      <li>\Network Interface(*)\Packets Received Unknown</li>
+      <li>\Network Interface(*)\Packets Received Non-Unicast/sec</li>
+      <li>\Network Interface(*)\Packets Received Unicast/sec</li>
+      <li>\Network Interface(*)\Packets Sent Unicast/sec</li>
+      <li>\Network Interface(*)\Packets Sent Non-Unicast/sec</li>
+    </ul>
+  </li>
+  <li>Memory
+    <ul>
+      <li>\Memory\% Committed Bytes In Use</li>
+      <li>\Memory\Available MBytes</li>
+      <li>\Memory\Page Faults/sec</li>
+      <li>\Memory\Pages/sec</li>
+      <li>\Paging File(_Total)\% Usage</li>
+      <li>Different source: Total Physical Memory</li>
+      <li>Different source: Available Physical Memory</li>
+      <li>Different source: Total paging file size</li>
+    </ul>
+  </li>
+  <li>System
+    <ul>
+      <li>\System\% Registry Quota In Use</li>
+      <li>\System\Context Switches/sec</li>
+      <li>\System\File Control Bytes/sec</li>
+      <li>\System\File Control Operations/sec</li>
+      <li>\System\File Read Bytes/sec</li>
+      <li>\System\File Read Operations/sec</li>
+      <li>\System\File Write Bytes/sec</li>
+      <li>\System\File Write Operations/sec</li>
+      <li>\System\File Data Operations/sec</li>
+      <li>\System\Processes</li>
+      <li>\System\Processor Queue Length</li>
+      <li>\System\System Calls/sec</li>
+      <li>\System\System Up Time</li>
+      <li>\System\Threads</li>
+    </ul>
+  </li>
+  <li>Process
+    <ul>
+      <li>\Process(*)\% Processor Time</li>
+      <li>\Process(*)\Elapsed Time</li>
+      <li>\Process(*)\ID Process</li>
+      <li>\Process(*)\Private Bytes</li>
+    </ul>
+  </li>
+</ul>
+
+
+### Relationships
+
+| Name | Description |
+| - | - |
+|success|All files are routed to success|
+
+
 ## PublishKafka
 
 ### Description
@@ -1321,6 +1472,7 @@ In the list below, the names of required properties appear in bold. Any other pr
 | Name | Default Value | Allowable Values | Description |
 | - | - | - | - |
 |File to Tail|||Fully-qualified filename of the file that should be tailed when using single file mode, or a file regex when using multifile mode|
+|**Initial Start Position**|Beginning of File|Beginning of Time<br>Beginning of File<br>Current Time|When the Processor first begins to tail data, this property specifies where the Processor should begin reading data. Once data has been ingested from a file, the Processor will continue from the last point from which it has received data.<br>Beginning of Time: Start with the oldest data that matches the Rolling Filename Pattern and then begin reading from the File to Tail.<br>Beginning of File: Start with the beginning of the File to Tail. Do not ingest any data that has already been rolled over.<br>Current Time: Start with the data at the end of the File to Tail. Do not ingest any data that has already been rolled over or any data in the File to Tail that has already been written.|
 |Input Delimiter|||Specifies the character that should be used for delimiting the data being tailedfrom the incoming file.If none is specified, data will be ingested as it becomes available.|
 |State File|TailFileState||Specifies the file that should be used for storing state about what data has been ingested so that upon restart NiFi can resume from where it left off|
 |tail-base-directory||||

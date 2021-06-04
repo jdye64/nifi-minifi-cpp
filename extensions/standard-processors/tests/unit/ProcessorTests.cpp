@@ -498,7 +498,7 @@ TEST_CASE("Test Find file", "[getfileCreate3]") {
 
 class TestProcessorNoContent : public minifi::core::Processor {
  public:
-  explicit TestProcessorNoContent(std::string name, utils::Identifier uuid = {})
+  explicit TestProcessorNoContent(const std::string& name, const utils::Identifier& uuid = {})
       : Processor(name, uuid),
         Success("success", "All files are routed to success") {
   }
@@ -742,4 +742,41 @@ TEST_CASE_METHOD(ProcessorWithIncomingConnectionTest, "A failed and re-penalized
   REQUIRE(incoming_connection_->isWorkAvailable());
   const auto next_flow_file_5 = incoming_connection_->poll(expired_flow_files);
   REQUIRE(next_flow_file_5 == penalized_flow_file);
+}
+
+TEST_CASE("InputRequirementTestOk", "[InputRequirement]") {
+  TestController testController;
+  LogTestController::getInstance().setDebug<minifi::processors::GenerateFlowFile>();
+  LogTestController::getInstance().setDebug<minifi::processors::LogAttribute>();
+
+  std::shared_ptr<TestPlan> plan = testController.createPlan();
+  plan->addProcessor("GenerateFlowFile", "generateFlowFile");
+  plan->addProcessor("LogAttribute", "logAttribute", core::Relationship("success", "description"), true);
+
+  REQUIRE_NOTHROW(plan->validateAnnotations());
+  testController.runSession(plan);
+}
+
+TEST_CASE("InputRequirementTestForbidden", "[InputRequirement]") {
+  TestController testController;
+  LogTestController::getInstance().setDebug<minifi::processors::GenerateFlowFile>();
+
+  std::shared_ptr<TestPlan> plan = testController.createPlan();
+  plan->addProcessor("GenerateFlowFile", "generateFlowFile");
+  plan->addProcessor("GenerateFlowFile", "generateFlowFile2", core::Relationship("success", "description"), true);
+
+  REQUIRE_THROWS_WITH(plan->validateAnnotations(), Catch::EndsWith("INPUT_FORBIDDEN was specified for the processor, but there are incoming connections"));
+  testController.runSession(plan);
+}
+
+TEST_CASE("InputRequirementTestRequired", "[InputRequirement]") {
+  TestController testController;
+  LogTestController::getInstance().setDebug<minifi::processors::LogAttribute>();
+
+  std::shared_ptr<TestPlan> plan = testController.createPlan();
+  plan->addProcessor("LogAttribute", "logAttribute");
+  plan->addProcessor("LogAttribute", "logAttribute2", core::Relationship("success", "description"), true);
+
+  REQUIRE_THROWS_WITH(plan->validateAnnotations(), Catch::EndsWith("INPUT_REQUIRED was specified for the processor, but no incoming connections were found"));
+  testController.runSession(plan);
 }

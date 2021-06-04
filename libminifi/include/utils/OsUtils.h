@@ -29,8 +29,22 @@ namespace OsUtils {
 /// Resolves a user ID to a username
 extern std::string userIdToUsername(const std::string &uid);
 
-/// Returns memory usage in bytes, including shared memory
-uint64_t getMemoryUsage();
+/// Returns physical memory usage by the current process in bytes
+int64_t getCurrentProcessPhysicalMemoryUsage();
+
+/// Returns physical memory usage by the system in bytes
+int64_t getSystemPhysicalMemoryUsage();
+
+/// Returns the total physical memory in the system in bytes
+int64_t getSystemTotalPhysicalMemory();
+
+#ifdef WIN32
+/// Returns the total paging file size in bytes
+int64_t getTotalPagingFileSize();
+#endif
+
+/// Returns the host architecture (e.g. x32, arm64)
+std::string getMachineArchitecture();
 
 #ifdef WIN32
 /// Resolves common identifiers

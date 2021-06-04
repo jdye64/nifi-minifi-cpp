@@ -83,14 +83,16 @@ Through JNI extensions you can run NiFi processors using NARs. The JNI extension
 | Kafka | [PublishKafka](PROCESSORS.md#publishkafka)      |    -DENABLE_LIBRDKAFKA=ON  |
 | JNI | **NiFi Processors**     |    -DENABLE_JNI=ON  |
 | MQTT | [ConsumeMQTT](PROCESSORS.md#consumeMQTT)<br/>[PublishMQTT](PROCESSORS.md#publishMQTT)     |    -DENABLE_MQTT=ON  |
+| OPC  | [FetchOPCProcessor](PROCESSORS.md#fetchopcprocessor)  |  -DENABLE_OPC=ON |
 | OpenCV | [CaptureRTSPFrame](PROCESSORS.md#captureRTSPFrame)     |    -DENABLE_OPENCV=ON  |
 | OpenWSMAN | SourceInitiatedSubscriptionListener | -DENABLE_OPENWSMAN=ON |
 | PCAP | [CapturePacket](PROCESSORS.md#capturepacket)      |    -DENABLE_PCAP=ON  |
-| Rapids | [CapturePacket](PROCESSORS.md#capturepacket)      |    -DENABLE_RAPIDS=ON  |
+| PDH (Windows only) | [PerformanceDataMonitor](PROCESSORS.md#performancedatamonitor)      |    -DENABLE_PDH=ON  |
 | Scripting | [ExecuteScript](PROCESSORS.md#executescript)<br/>**Custom Python Processors**     |    -DDISABLE_SCRIPTING=ON  |
 | Sensors | GetEnvironmentalSensors<br/>GetMovementSensors | -DENABLE_SENSORS=ON |
 | SFTP | [FetchSFTP](PROCESSORS.md#fetchsftp)<br/>[ListSFTP](PROCESSORS.md#listsftp)<br/>[PutSFTP](PROCESSORS.md#putsftp) | -DENABLE_SFTP=ON |
 | SQL | [ExecuteSQL](PROCESSORS.md#executesql)<br/>[PutSQL](PROCESSORS.md#putsql)<br/>[QueryDatabaseTable](PROCESSORS.md#querydatabasetable)<br/> | -DENABLE_SQL=ON  |
+| Systemd | [ConsumeJournald](PROCESSORS.md#consumejournald) | -DENABLE_SYSTEMD=ON |
 | Tensorflow | TFApplyGraph<br/>TFConvertImageToTensor<br/>TFExtractTopLabels<br/>      |    -DENABLE_TENSORFLOW=ON  |
 | USB Camera | [GetUSBCamera](PROCESSORS.md#getusbcamera)     |    -DENABLE_USB_CAMERA=ON  |
 | Windows Event Log (Windows only) | CollectorInitiatedSubscription<br/>ConsumeWindowsEventLog<br/>TailEventLog | -DENABLE_WEL=ON |
@@ -344,8 +346,8 @@ $ # It is recommended that you install bison from source as HomeBrew now uses an
      Select MiNiFi C++ Features to toggle.
     ****************************************
     A. Persistent Repositories .....Enabled
-    B. Lib Curl Features ...........Enabled
-    C. Lib Archive Features ........Enabled
+    B. libcurl features  ...........Enabled
+    C. libarchive features  ........Enabled
     D. Execute Script support ......Enabled
     E. Expression Language support .Enabled
     F. Kafka support ...............Disabled
@@ -355,16 +357,16 @@ $ # It is recommended that you install bison from source as HomeBrew now uses an
     J. TensorFlow Support ..........Disabled
     K. Bustache Support ............Disabled
     L. MQTT Support ................Disabled
-    M. SQLite Support ..............Disabled
-    N. Python Support ..............Disabled
-    O. COAP Support ................Enabled
-    S. SFTP Support ................Disabled
-    V. AWS Support .................Disabled
+    M. Python Support ..............Disabled
+    N. COAP Support ................Enabled
+    O. SFTP Support ................Disabled
+    S. AWS Support .................Disabled
     T. OpenCV Support ..............Disabled
     U. OPC-UA Support ..............Disabled
-    W. SQL Support .................Disabled
-    X. Openwsman Support ...........Disabled
-    Y. Azure Support ...............Disabled
+    V. SQL Support .................Disabled
+    W. Openwsman Support ...........Disabled
+    X. Azure Support ...............Disabled
+    Y. Systemd Support .............Enabled
     ****************************************
                 Build Options.
     ****************************************
@@ -381,7 +383,7 @@ $ # It is recommended that you install bison from source as HomeBrew now uses an
       version of cmake or other software, or
       incompatibility with other extensions
 
-    Enter choice [ A - X or 1-7 ]
+    Enter choice [ A - Y or 1-7 ]
   ```
 
 - Boostrap now saves state between runs. State will automatically be saved. Provide -c or --clear to clear this state. The -i option provides a guided menu install with the ability to change
@@ -443,7 +445,7 @@ advanced features.
   CPack: Install projects
   CPack: - Install directory: ~/Development/code/apache/nifi-minifi-cpp
   CPack: Create package
-  CPack: - package: ~/Development/code/apache/nifi-minifi-cpp/build/nifi-minifi-cpp-0.9.0-bin.tar.gz generated.
+  CPack: - package: ~/Development/code/apache/nifi-minifi-cpp/build/nifi-minifi-cpp-0.10.0-bin.tar.gz generated.
   ```
 
 - Create a source assembly located in your build directory with suffix -source.tar.gz
@@ -455,18 +457,18 @@ advanced features.
   CPack: Install projects
   CPack: - Install directory: ~/Development/code/apache/nifi-minifi-cpp
   CPack: Create package
-  CPack: - package: ~/Development/code/apache/nifi-minifi-cpp/build/nifi-minifi-cpp-0.9.0-source.tar.gz generated.
+  CPack: - package: ~/Development/code/apache/nifi-minifi-cpp/build/nifi-minifi-cpp-0.10.0-source.tar.gz generated.
   ```
 
 - (Optional) Create a Docker image from the resulting binary assembly output from "make package".
 ```
 ~/Development/code/apache/nifi-minifi-cpp/build
 $ make docker
-NiFi-MiNiFi-CPP Version: 0.9.0
+NiFi-MiNiFi-CPP Version: 0.10.0
 Current Working Directory: /Users/jdyer/Development/github/nifi-minifi-cpp/docker
 CMake Source Directory: /Users/jdyer/Development/github/nifi-minifi-cpp
-MiNiFi Package: nifi-minifi-cpp-0.9.0-bin.tar.gz
-Docker Command: 'docker build --build-arg UID=1000 --build-arg GID=1000 --build-arg MINIFI_VERSION=0.9.0 --build-arg MINIFI_PACKAGE=nifi-minifi-cpp-0.9.0-bin.tar.gz -t apacheminificpp:0.9.0 .'
+MiNiFi Package: nifi-minifi-cpp-0.10.0-bin.tar.gz
+Docker Command: 'docker build --build-arg UID=1000 --build-arg GID=1000 --build-arg MINIFI_VERSION=0.10.0 --build-arg MINIFI_PACKAGE=nifi-minifi-cpp-0.10.0-bin.tar.gz -t apacheminificpp:0.10.0 .'
 Sending build context to Docker daemon 777.2 kB
 Step 1 : FROM alpine:3.5
  ---> 88e169ea8f46
@@ -488,17 +490,17 @@ $ make docker-verify
 ```
 
 ### Building For Other Distros
-If you have docker installed on your machine you can build for CentOS 7, Fedora 29, Ubuntu 16, Ubuntu 18, and Debian 9 via our make docker commands. The following table
+If you have docker installed on your machine you can build for CentOS 8, Fedora 34, Ubuntu 18.04, Ubuntu 20.04, and Debian 10 via our make docker commands. The following table
 provides the command to build your distro and the output file in your build directory. Since the versions are limited ( except for Ubuntu ) we output the archive based on the distro's name.
 
 
 | Distro         | command           | Output File  |
 | ------------- |:-------------| :-----|
-| CentOS 7  | make centos | nifi-minifi-cpp-centos-$VERSION-bin.tar.gz
-| Debian 9  | make debian | nifi-minifi-cpp-debian-$VERSION-bin.tar.gz
-| Fedora 29  | make fedora | nifi-minifi-cpp-fedora-$VERSION-bin.tar.gz
-| Ubuntu 16  | make u16 | nifi-minifi-cpp-xenial-$VERSION-bin.tar.gz
-| Ubuntu 18  | make u18 | nifi-minifi-cpp-bionic-$VERSION-bin.tar.gz
+| CentOS 8  | make centos | nifi-minifi-cpp-centos-$VERSION-bin.tar.gz
+| Debian 10 (buster)  | make debian | nifi-minifi-cpp-debian-$VERSION-bin.tar.gz
+| Fedora 34  | make fedora | nifi-minifi-cpp-fedora-$VERSION-bin.tar.gz
+| Ubuntu 18.04 (bionic)  | make u18 | nifi-minifi-cpp-bionic-$VERSION-bin.tar.gz
+| Ubuntu 20.04 (focal)  | make u20 | nifi-minifi-cpp-focal-$VERSION-bin.tar.gz
 
 
 ### Snapcraft
@@ -597,6 +599,9 @@ New contributions are expected to pass the shellcheck analysis as part of the ve
 If a shellcheck requested change is unfeasable it shall be disabled on per-line basis and will be subjected to review.
 For more information on an issue please check the [shellcheck wiki page](https://github.com/koalaman/shellcheck/wiki).
 
+Python script files shall follow the PEP8 guidelines and best practices. The project includes [flake8](https://flake8.pycqa.org/en/latest/) checks
+as part of the verification process, that is applied to all new contributions.
+
 Additionally, all new files must include a copy of the Apache License Header.
 
 For more details on how to contribute please see our [Contribution Guide](CONTRIB.md)
@@ -619,3 +624,4 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+

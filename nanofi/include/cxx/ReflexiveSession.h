@@ -42,29 +42,28 @@ class ReflexiveSession : public ProcessSession{
    * Create a new process session
    */
   ReflexiveSession(std::shared_ptr<ProcessContext> processContext = nullptr)
-      : ProcessSession(processContext){
+      : ProcessSession(processContext) {
   }
 
 // Destructor
   virtual ~ReflexiveSession() = default;
 
-   virtual std::shared_ptr<core::FlowFile> get(){
+   virtual std::shared_ptr<core::FlowFile> get() {
      auto prevff = ff;
      ff = nullptr;
      return prevff;
    }
 
-   virtual void add(const std::shared_ptr<core::FlowFile> &flow){
+   virtual void add(const std::shared_ptr<core::FlowFile> &flow) {
      ff = flow;
    }
-   virtual void transfer(const std::shared_ptr<core::FlowFile>& /*flow*/, Relationship /*relationship*/){
+   virtual void transfer(const std::shared_ptr<core::FlowFile>& /*flow*/, Relationship /*relationship*/) {
      // no op
    }
  protected:
   //
   // Get the FlowFile from the highest priority queue
   std::shared_ptr<core::FlowFile> ff;
-
 };
 
 } /* namespace core */

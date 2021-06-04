@@ -22,7 +22,6 @@ processor_params * procparams = NULL;
 volatile sig_atomic_t stopped = 0;
 
 void free_proc_params(const char * uuid) {
-
     struct processor_params * pp = NULL;
     HASH_FIND_STR(procparams, uuid, pp);
     if (pp) {
@@ -80,7 +79,7 @@ int validate_input_params(tailfile_input_params * params, uint64_t * intrvl, uin
         return -1;
     }
     // Check for file existence
-    if (S_ISDIR(stats.st_mode)){
+    if (S_ISDIR(stats.st_mode)) {
         printf("Error: %s is a directory!\n", params->file);
         return -1;
     }
@@ -273,10 +272,7 @@ void on_trigger_tailfilechunk(processor_session * ps, processor_context * ctx) {
 
         props = (struct proc_properties *)malloc(sizeof(struct proc_properties));
         memset(props, 0, sizeof(struct proc_properties));
-        int len = strlen(file_path);
-        props->file_path = (char *)malloc((len + 1) * sizeof(char));
-        strncpy(props->file_path, file_path, len);
-        props->file_path[len] = '\0';
+        props->file_path = strdup(file_path);
         props->chunk_size = chunk_size_value;
         add_processor_properties(uuid_str, props);
     }
@@ -403,10 +399,7 @@ struct proc_properties * get_properties(const char * uuid, processor_context * c
         }
     }
 
-    int len = strlen(file_path);
-    props->file_path = (char *)malloc((len + 1) * sizeof(char));
-    strncpy(props->file_path, file_path, len);
-    props->file_path[len] = '\0';
+    props->file_path = strdup(file_path);
     props->delimiter = delim;
 
     add_processor_properties(uuid, props);

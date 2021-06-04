@@ -43,7 +43,7 @@ namespace python {
 class PythonCreator : public minifi::core::CoreComponent {
  public:
 
-  explicit PythonCreator(const std::string &name, utils::Identifier uuid = utils::Identifier())
+  explicit PythonCreator(const std::string &name, const utils::Identifier &uuid = {})
       : minifi::core::CoreComponent(name, uuid),
         logger_(logging::LoggerFactory<PythonCreator>::getLogger()) {
   }
@@ -60,11 +60,9 @@ class PythonCreator : public minifi::core::CoreComponent {
     for (const auto &path : pathOrFiles) {
       utils::file::FileUtils::addFilesMatchingExtension(logger_, path, ".py", classpaths_);
     }
-
   }
 
   void configure(const std::shared_ptr<Configure> &configuration) override {
-
     python::PythonScriptEngine::initialize();
 
     auto engine = std::make_shared<python::PythonScriptEngine>();
@@ -121,6 +119,7 @@ class PythonCreator : public minifi::core::CoreComponent {
 
             minifi::ClassDescription description(script_with_package);
             description.dynamic_properties_ = proc->getPythonSupportDynamicProperties();
+            description.inputRequirement_ = proc->getInputRequirementAsString();
             auto properties = proc->getPythonProperties();
 
             minifi::AgentDocs::putDescription(scriptName, proc->getDescription());
@@ -135,13 +134,9 @@ class PythonCreator : public minifi::core::CoreComponent {
           } catch (const std::exception &e) {
             logger_->log_warn("Cannot load %s because of %s", scriptName, e.what());
           }
-
         }
-
       }
-
     }
-
   }
 
  private:

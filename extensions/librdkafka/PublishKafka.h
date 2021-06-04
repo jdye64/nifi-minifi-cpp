@@ -88,7 +88,7 @@ class PublishKafka : public core::Processor {
   static const core::Relationship Failure;
   static const core::Relationship Success;
 
-  explicit PublishKafka(std::string name, utils::Identifier uuid = utils::Identifier())
+  explicit PublishKafka(const std::string& name, const utils::Identifier& uuid = {})
       : core::Processor(std::move(name), uuid) {
   }
 
@@ -114,6 +114,10 @@ class PublishKafka : public core::Processor {
   bool createNewTopic(const std::shared_ptr<core::ProcessContext> &context, const std::string& topic_name, const std::shared_ptr<core::FlowFile>& flow_file);
 
  private:
+  core::annotation::Input getInputRequirement() const override {
+    return core::annotation::Input::INPUT_REQUIRED;
+  }
+
   std::shared_ptr<logging::Logger> logger_{logging::LoggerFactory<PublishKafka>::getLogger()};
 
   KafkaConnectionKey key_;

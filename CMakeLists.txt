@@ -19,12 +19,8 @@
 
 cmake_minimum_required(VERSION 3.11)
 cmake_policy(SET CMP0065 OLD) # default export policy, required for self-dlopen
-
-project(nifi-minifi-cpp)
+project(nifi-minifi-cpp VERSION 0.10.0)
 set(PROJECT_NAME "nifi-minifi-cpp")
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 9)
-set(PROJECT_VERSION_PATCH 0)
 
 # Optional build number for linux distribution targets' tar.gz output
 set(BUILD_NUMBER "" CACHE STRING "Build number")
@@ -41,6 +37,7 @@ include(ExternalProject)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(WholeArchive)
 
+option(ENABLE_LINTER "Create linter components" ON)
 option(SKIP_TESTS "Skips building all tests." OFF)
 option(PORTABLE "Instructs the compiler to remove architecture specific optimizations" ON)
 option(USE_SHARED_LIBS "Builds using shared libraries" ON)
@@ -499,7 +496,7 @@ if (ENABLE_TENSORFLOW)
 	createExtension(TENSORFLOW-EXTENSIONS "TENSORFLOW EXTENSIONS" "This enables TensorFlow support" "extensions/tensorflow" "${TEST_DIR}/tensorflow-tests")
 endif()
 
-## AWS Extentions
+## AWS Extensions
 option(ENABLE_AWS "Enables AWS support." OFF)
 if (ENABLE_ALL OR ENABLE_AWS)
 	include(BundledAwsSdkCpp)
@@ -507,7 +504,15 @@ if (ENABLE_ALL OR ENABLE_AWS)
 	createExtension(AWS-EXTENSIONS "AWS EXTENSIONS" "This enables AWS support" "extensions/aws" "${TEST_DIR}/aws-tests")
 endif()
 
-## OpenCV Extesions
+## PDH Extentsions
+if (WIN32)
+	option(ENABLE_PDH "Enables PDH support." OFF)
+	if (ENABLE_PDH)
+		createExtension(PDH-EXTENSIONS "PDH EXTENSIONS" "This enables PDH support" "extensions/pdh" "extensions/pdh/tests")
+	endif()
+endif()
+
+## OpenCV Extensions
 option(ENABLE_OPENCV "Disables the OpenCV extensions." OFF)
 if (ENABLE_OPENCV)
 	createExtension(OPENCV-EXTENSIONS "OPENCV EXTENSIONS" "This enabled OpenCV support" "extensions/opencv" "extensions/opencv/tests")
@@ -521,7 +526,7 @@ if (ENABLE_BUSTACHE)
 	createExtension(BUSTACHE-EXTENSIONS "BUSTACHE EXTENSIONS" "This enables bustache functionality including ApplyTemplate." "extensions/bustache" "${TEST_DIR}/bustache-tests")
 endif()
 
-## OPC Extentions
+## OPC Extensions
 if (ENABLE_OPC)
 	include(BundledMbedTLS)
 	use_bundled_mbedtls(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
@@ -552,7 +557,7 @@ if ((ENABLE_OPENWSMAN AND NOT DISABLE_CIVET AND NOT DISABLE_CURL) OR ENABLE_ALL 
 	list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/libxml2/dummy")
 endif()
 
-## Openwsman Extesions
+## Openwsman Extensions
 if (ENABLE_OPENWSMAN AND NOT DISABLE_CIVET AND NOT DISABLE_CURL)
 	include(BundledOpenWSMAN)
 	use_bundled_openwsman(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
@@ -560,7 +565,7 @@ if (ENABLE_OPENWSMAN AND NOT DISABLE_CIVET AND NOT DISABLE_CURL)
 	createExtension(OPENWSMAN-EXTENSIONS "OPENWSMAN EXTENSIONS" "This enables Openwsman support" "extensions/openwsman")
 endif()
 
-## Azure Extentions
+## Azure Extensions
 if (ENABLE_ALL OR ENABLE_AZURE)
 	include(NlohmannJson)
 	list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/nlohmann_json/dummy")
@@ -568,6 +573,14 @@ if (ENABLE_ALL OR ENABLE_AZURE)
 	include(BundledAzureSdkCpp)
 	use_bundled_libazure(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 	createExtension(AZURE-EXTENSIONS "AZURE EXTENSIONS" "This enables Azure support" "extensions/azure" "${TEST_DIR}/azure-tests")
+endif()
+
+## Add the systemd extension
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	option(ENABLE_SYSTEMD "Disables the systemd extension." ON)
+	if (ENABLE_SYSTEMD)
+		createExtension(SYSTEMD-EXTENSIONS "SYSTEMD EXTENSIONS" "Enabled log collection from journald" "extensions/systemd" "extensions/systemd/tests")
+	endif()
 endif()
 
 ## NOW WE CAN ADD LIBRARIES AND EXTENSIONS TO MAIN
@@ -665,8 +678,8 @@ if(WIN32)
 		list(SORT VCRUNTIME_REDIST_VERSIONS)
 		list(REVERSE VCRUNTIME_REDIST_VERSIONS)
 		list(GET VCRUNTIME_REDIST_VERSIONS 0 VCRUNTIME_REDIST_DIR)
-		message("Using redist directory: ${VCRUNTIME_REDIST_DIR}")
 	endif()
+	message("Using redist directory: ${VCRUNTIME_REDIST_DIR}")
 
 	if (MSI_REDISTRIBUTE_UCRT_NONASL)
 		set(UCRT_DIR_NAT "$ENV{WindowsSdkDir}Redist\\ucrt\\DLLs\\$ENV{Platform}")
@@ -727,20 +740,12 @@ if(WIN32)
 
 		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 			message("Using ${VCRUNTIME_X64_REDIST_CRT_DIR} VC Redistributables")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/concrt140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/msvcp140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/msvcp140_1.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/msvcp140_2.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/vccorlib140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X64_REDIST_CRT_DIR}/vcruntime140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
+			file(GLOB VCRUNTIME_X64_REDIST_CRT_FILES "${VCRUNTIME_X64_REDIST_CRT_DIR}/*.dll")
+			file(COPY ${VCRUNTIME_X64_REDIST_CRT_FILES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
 		elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 			message("Using ${VCRUNTIME_X86_REDIST_CRT_DIR} VC Redistributables")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/concrt140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/msvcp140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/msvcp140_1.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/msvcp140_2.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/vccorlib140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
-			file(COPY "${VCRUNTIME_X86_REDIST_CRT_DIR}/vcruntime140.dll" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
+			file(GLOB VCRUNTIME_X86_REDIST_CRT_FILES "${VCRUNTIME_X86_REDIST_CRT_DIR}/*.dll")
+			file(COPY ${VCRUNTIME_X86_REDIST_CRT_FILES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/redist")
 		else()
 			message(FATAL_ERROR "Could not determine architecture, CMAKE_SIZEOF_VOID_P is unexpected: ${CMAKE_SIZEOF_VOID_P}")
 		endif()
@@ -853,23 +858,22 @@ else()
 	include(DockerConfig)
 endif()
 
-if(NOT WIN32)
 # Create a custom build target that will run the linter.
 get_property(extensions GLOBAL PROPERTY EXTENSION-LINTERS)
 add_custom_target(linter
-	COMMAND ${CMAKE_SOURCE_DIR}/thirdparty/google-styleguide/run_linter.sh
-			${CMAKE_SOURCE_DIR}/libminifi/include/ --
-			${CMAKE_SOURCE_DIR}/libminifi/src/
-	COMMAND ${CMAKE_SOURCE_DIR}/thirdparty/google-styleguide/run_linter.sh
-			${CMAKE_SOURCE_DIR}/libminifi/include/ --
-			${CMAKE_SOURCE_DIR}/libminifi/test/
-	COMMAND ${CMAKE_SOURCE_DIR}/thirdparty/google-styleguide/run_linter.sh
-			${CMAKE_SOURCE_DIR}/encrypt-config/ --
-			${CMAKE_SOURCE_DIR}/encrypt-config/
+	COMMAND python ${CMAKE_SOURCE_DIR}/thirdparty/google-styleguide/run_linter.py -q -i
+		${CMAKE_SOURCE_DIR}/libminifi/include/
+		${CMAKE_SOURCE_DIR}/libminifi/src/
+		${CMAKE_SOURCE_DIR}/libminifi/test/
+		${CMAKE_SOURCE_DIR}/encrypt-config/
 	DEPENDS ${extensions})
 
+if(NOT WIN32)
 add_custom_target(shellcheck
 	COMMAND ${CMAKE_SOURCE_DIR}/run_shellcheck.sh ${CMAKE_SOURCE_DIR})
+
+add_custom_target(flake8
+	COMMAND ${CMAKE_SOURCE_DIR}/run_flake8.sh ${CMAKE_SOURCE_DIR})
 endif(NOT WIN32)
 
 # Custom target to download and run Apache Release Audit Tool (RAT)

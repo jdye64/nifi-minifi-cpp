@@ -22,7 +22,7 @@ add_custom_target(
         -u 1000
         -g 1000
         -v ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
-        -c IMAGE_TYPE=release
+        -i release
         -c ENABLE_ALL=${ENABLE_ALL}
         -c ENABLE_PYTHON=${ENABLE_PYTHON}
         -c ENABLE_OPS=${ENABLE_OPS}
@@ -124,7 +124,7 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docker/)
 
 add_custom_target(
-    u16
+    u20
     COMMAND ${CMAKE_SOURCE_DIR}/docker/DockerBuild.sh
         -u 1000
         -g 1000
@@ -132,7 +132,7 @@ add_custom_target(
         -i release
         -c ENABLE_JNI=${ENABLE_JNI}
         -l ${CMAKE_BINARY_DIR}
-        -d xenial
+        -d focal
         -c BUILD_NUMBER=${BUILD_NUMBER}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docker/)
 

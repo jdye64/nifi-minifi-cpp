@@ -88,7 +88,7 @@ class VerifyCoAPServer : public CoapIntegrationBase {
     assert(verifyLogLinePresenceInPollTime(std::chrono::seconds(3),
         "Received ack. version 3. number of operations 1",
         "Received ack. version 3. number of operations 0",
-        "Received error event from protocol",
+        "Received read error event from protocol",
         "Received op 1, with id id and operand operand"));
   }
 
@@ -112,9 +112,8 @@ class VerifyCoAPServer : public CoapIntegrationBase {
 
 
     server->add_endpoint(minifi::coap::Method::Post, [](minifi::coap::CoapQuery)->minifi::coap::CoapResponse {
-      minifi::coap::CoapResponse response(205,0x00,0);
+      minifi::coap::CoapResponse response(205, 0x00, 0);
       return response;
-
     });
 
     {
@@ -150,15 +149,14 @@ class VerifyCoAPServer : public CoapIntegrationBase {
 
     server->add_endpoint("heartbeat", minifi::coap::Method::Post, [&](minifi::coap::CoapQuery)-> minifi::coap::CoapResponse {
       if (responses.size_approx() > 0) {
-        minifi::coap::CoapResponse resp(500,0,0);;
+        minifi::coap::CoapResponse resp(500, 0, 0);;
         responses.try_dequeue(resp);
         return resp;
       }
       else {
-        minifi::coap::CoapResponse response(500,0,0);
+        minifi::coap::CoapResponse response(500, 0, 0);
         return response;
       }
-
     });
     server->start();
     configuration->set("c2.enable", "true");

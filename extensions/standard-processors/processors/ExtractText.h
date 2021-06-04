@@ -42,7 +42,7 @@ class ExtractText : public core::Processor {
     /*!
      * Create a new processor
      */
-    explicit ExtractText(std::string name,  utils::Identifier uuid = utils::Identifier())
+    explicit ExtractText(const std::string& name,  const utils::Identifier& uuid = {})
     : Processor(name, uuid) {
         logger_ = logging::LoggerFactory<ExtractText>::getLogger();
     }
@@ -64,11 +64,11 @@ class ExtractText : public core::Processor {
     static constexpr int DEFAULT_SIZE_LIMIT = 2 * 1024 * 1024;
 
     //! OnTrigger method, implemented by NiFi ExtractText
-    void onTrigger(core::ProcessContext *context, core::ProcessSession *session);
+    void onTrigger(core::ProcessContext *context, core::ProcessSession *session) override;
     //! Initialize, over write by NiFi ExtractText
-    void initialize(void);
+    void initialize(void) override;
 
-    virtual bool supportsDynamicProperties() {
+    bool supportsDynamicProperties() override {
       return true;
     }
 
@@ -86,6 +86,10 @@ class ExtractText : public core::Processor {
     };
 
  private:
+    core::annotation::Input getInputRequirement() const override {
+      return core::annotation::Input::INPUT_REQUIRED;
+    }
+
     //! Logger
     std::shared_ptr<logging::Logger> logger_;
 };

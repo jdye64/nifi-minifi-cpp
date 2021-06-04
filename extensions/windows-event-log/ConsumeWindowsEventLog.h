@@ -58,7 +58,7 @@ public:
   /*!
   * Create a new processor
   */
-  ConsumeWindowsEventLog(const std::string& name, utils::Identifier uuid = utils::Identifier());
+  ConsumeWindowsEventLog(const std::string& name, const utils::Identifier& uuid = {});
 
   //! Destructor
   virtual ~ConsumeWindowsEventLog();
@@ -124,6 +124,10 @@ private:
     }
     const decltype(std::chrono::steady_clock::now()) time_ = std::chrono::steady_clock::now();
   };
+
+  core::annotation::Input getInputRequirement() const override {
+    return core::annotation::Input::INPUT_FORBIDDEN;
+  }
 
   bool commitAndSaveBookmark(const std::wstring &bookmarkXml, const std::shared_ptr<core::ProcessSession> &session);
   std::tuple<size_t, std::wstring> processEventLogs(const std::shared_ptr<core::ProcessContext> &context,

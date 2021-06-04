@@ -53,7 +53,7 @@ class CallbackProcessor : public core::Processor {
   /*!
    * Create a new processor
    */
-  CallbackProcessor(std::string name, utils::Identifier uuid = utils::Identifier())
+  CallbackProcessor(const std::string& name, const utils::Identifier& uuid = {})
       : Processor(std::move(name), uuid) {
   }
   // Destructor
@@ -86,7 +86,6 @@ class CallbackProcessor : public core::Processor {
  private:
   // Logger
   std::shared_ptr<logging::Logger> logger_{ logging::LoggerFactory<CallbackProcessor>::getLogger() };
-
 };
 
 REGISTER_RESOURCE(CallbackProcessor, "");
